@@ -36,6 +36,13 @@ const cityCoordinates: Record<string, [number, number]> = {
 // Colors for pie chart
 const PIE_COLORS = ['#3B82F6', '#F59E0B', '#EF4444', '#10B981', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6', '#F97316', '#84CC16', '#06B6D4', '#A855F7']
 
+// Helper function to format large numbers
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${Math.round(num / 1000)}K`;
+  return num.toString();
+};
+
 interface FilterParams {
   filter?: string;
   startDate?: string;
@@ -74,13 +81,30 @@ const Trends = ({ chartData, isLoading, filterParams }: TrendsProps) => {
     }));
   }, [chartData]);
 
-  // Transform userGraphData to location data for map
-  const locationData = useMemo(() => {
-    if (!userGraphData || userGraphData.length === 0) {
+  // Transform topSectors to sector trends data
+  const sectorTrendsData = useMemo(() => {
+    if (!userGraphData?.topSectors || typeof userGraphData.topSectors !== 'object') {
       return [];
     }
 
-    return userGraphData.map((item) => ({
+    return Object.entries(userGraphData.topSectors)
+      .map(([name, value]) => ({ name: name.toUpperCase(), value }))
+      .sort((a, b) => b.value - a.value);
+  }, [userGraphData]);
+
+  // Get max value for bar width calculation
+  const maxSectorValue = useMemo(() => {
+    if (sectorTrendsData.length === 0) return 1;
+    return Math.max(...sectorTrendsData.map(s => s.value));
+  }, [sectorTrendsData]);
+
+  // Transform stateDistribution to location data for map
+  const locationData = useMemo(() => {
+    if (!userGraphData?.stateDistribution || !Array.isArray(userGraphData.stateDistribution) || userGraphData.stateDistribution.length === 0) {
+      return [];
+    }
+
+    return userGraphData.stateDistribution.map((item) => ({
       city: item.state,
       percentage: item.percentage,
       users: `${item.users.toLocaleString()} Users`,
@@ -97,22 +121,83 @@ const Trends = ({ chartData, isLoading, filterParams }: TrendsProps) => {
       }));
   }, [locationData]);
 
+  // Transform topTopics to array
+  const topTopicsData = useMemo(() => {
+    if (!userGraphData?.topTopics || typeof userGraphData.topTopics !== 'object') {
+      return [];
+    }
+
+    return Object.entries(userGraphData.topTopics)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [userGraphData]);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Left Column - Top Conversations */}
-      <Card className="h-fit">
-        <CardHeader className="pb-2">
-          {isLoading ? (
-            <div className="h-5 w-36 bg-gray-200 rounded animate-pulse" />
-          ) : (
-            <CardTitle className="text-sm sm:text-base font-semibold">Top Conversations</CardTitle>
-          )}
-        </CardHeader>
-        <CardContent className="px-3 sm:px-6">
-          {isLoading ? (
-            <div className="space-y-6">
-              {/* Pie chart skeleton */}
-              <div className="flex items-center justify-center py-4">
+      {/* Left Column - Sector Trends + Top Conversations */}
+      <div className="space-y-6">
+        {/* Sector Trends */}
+        <Card className="h-fit">
+          <CardHeader className="pb-2">
+            {isLoading ? (
+              <div className="h-5 w-28 bg-gray-200 rounded animate-pulse" />
+            ) : (
+              <CardTitle className="text-sm sm:text-base font-semibold">Sector Trends</CardTitle>
+            )}
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6">
+            {isUserGraphLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="space-y-1">
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-6 bg-gray-200 rounded animate-pulse" style={{ width: `${100 - i * 15}%` }} />
+                  </div>
+                ))}
+              </div>
+            ) : sectorTrendsData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <svg className="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <p className="text-sm font-medium">No sector data</p>
+                <p className="text-xs mt-1">Sector trends will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sectorTrendsData.map((sector) => (
+                  <div key={sector.name} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm font-semibold text-gray-900">{sector.name}</span>
+                      <span className="text-xs sm:text-sm text-gray-600">{formatNumber(sector.value)}</span>
+                    </div>
+                    <div className="h-6 bg-gray-100 rounded-sm overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-sm transition-all duration-500"
+                        style={{ width: `${(sector.value / maxSectorValue) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Conversations */}
+        <Card className="h-fit">
+          <CardHeader className="pb-2">
+            {isLoading ? (
+              <div className="h-5 w-36 bg-gray-200 rounded animate-pulse" />
+            ) : (
+              <CardTitle className="text-sm sm:text-base font-semibold">Top Conversations</CardTitle>
+            )}
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6">
+            {isLoading ? (
+              <div className="space-y-6">
+                {/* Pie chart skeleton */}
+                <div className="flex items-center justify-center py-4">
                 <div className="relative w-40 h-40 sm:w-48 sm:h-48">
                   <div className="absolute inset-0 rounded-full border-[20px] border-gray-200 animate-pulse" />
                   <div className="absolute inset-[20px] rounded-full bg-white" />
@@ -191,17 +276,20 @@ const Trends = ({ chartData, isLoading, filterParams }: TrendsProps) => {
             </>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
-      {/* Right Column - User Location */}
-      <Card className="h-fit">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          {isUserGraphLoading ? (
-            <div className="h-5 w-28 bg-gray-200 rounded animate-pulse" />
-          ) : (
-            <CardTitle className="text-sm sm:text-base font-semibold">User Location</CardTitle>
-          )}
-        </CardHeader>
+      {/* Right Column - User Location + Top Topics */}
+      <div className="space-y-6">
+        {/* User Location */}
+        <Card className="h-fit">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            {isUserGraphLoading ? (
+              <div className="h-5 w-28 bg-gray-200 rounded animate-pulse" />
+            ) : (
+              <CardTitle className="text-sm sm:text-base font-semibold">User Location</CardTitle>
+            )}
+          </CardHeader>
         <CardContent>
           {isUserGraphLoading ? (
             <div className="space-y-6">
@@ -292,7 +380,53 @@ const Trends = ({ chartData, isLoading, filterParams }: TrendsProps) => {
             </>
           )}
         </CardContent>
-      </Card>
+        </Card>
+
+        {/* Top Topics */}
+        <Card className="h-fit">
+          <CardHeader className="pb-2">
+            {isUserGraphLoading ? (
+              <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+            ) : (
+              <CardTitle className="text-sm sm:text-base font-semibold">Top Topics</CardTitle>
+            )}
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6">
+            {isUserGraphLoading ? (
+              <div className="flex flex-wrap gap-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="h-8 w-20 bg-gray-200 rounded-lg animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : topTopicsData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <svg className="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                <p className="text-sm font-medium">No topics found</p>
+                <p className="text-xs mt-1">Topics will appear here</p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {topTopicsData.map(({ topic, count }, index) => (
+                  <div
+                    key={`${topic}-${index}`}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-blue-100 text-gray-700 text-sm rounded-lg border border-blue-200"
+                  >
+                    <span className="capitalize font-medium">{topic}</span>
+                    <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                      {formatNumber(count)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

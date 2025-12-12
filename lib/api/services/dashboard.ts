@@ -65,11 +65,19 @@ export const getDashboard = async (params: DashboardFilterParams = {}): Promise<
   return response.data.data.body.data;
 };
 
-// User graph data point (location distribution)
-export interface UserLocationDataPoint {
+// State distribution data point
+export interface StateDistributionDataPoint {
   percentage: string;
   state: string;
   users: number;
+}
+
+// User graph data from API
+export interface UserGraphData {
+  topSectors: Record<string, number>;
+  stateDistribution: StateDistributionDataPoint[];
+  topKeywords: Record<string, number>;
+  topTopics: Record<string, number>;
 }
 
 // User graph API response
@@ -79,11 +87,11 @@ export interface UserGraphApiResponse {
   referenceId: string;
   status: boolean;
   message: string;
-  data: UserLocationDataPoint[];
+  data: UserGraphData;
 }
 
 // Get user graph data with filters
-export const getUserGraph = async (params: DashboardFilterParams = {}): Promise<UserLocationDataPoint[]> => {
+export const getUserGraph = async (params: DashboardFilterParams = {}): Promise<UserGraphData> => {
   const queryParams = new URLSearchParams();
 
   if (params.filter) queryParams.append('filter', params.filter);

@@ -34,30 +34,64 @@ const chartConfig = {
 } satisfies ChartConfig
 
 const UserOverviewChart: React.FC<UserOverviewChartProps> = ({ data, isLoading }) => {
-  // Predefined Y-axis ticks matching the design: 0, 100, 500, 1K, 10K, 50K
-  const yAxisTicks = useMemo(() => [1, 100, 500, 1000, 10000, 50000], []);
+  // Calculate Y-axis ticks dynamically based on data
+  const { yAxisTicks, domain } = useMemo(() => {
+    if (!data || data.length === 0) {
+      return { yAxisTicks: [0, 25, 50, 75, 100], domain: [0, 100] };
+    }
+
+    const values = data.map(d => d.value);
+    const maxValue = Math.max(...values);
+
+    // If all values are 0, return default scale
+    if (maxValue === 0) {
+      return { yAxisTicks: [0, 25, 50, 75, 100], domain: [0, 100] };
+    }
+
+    // Calculate a nice max value (round up to a nice number)
+    const getNiceMax = (max: number): number => {
+      if (max <= 5) return 5;
+      if (max <= 10) return 10;
+      if (max <= 25) return 25;
+      if (max <= 50) return 50;
+      if (max <= 100) return 100;
+      if (max <= 250) return 250;
+      if (max <= 500) return 500;
+      if (max <= 1000) return 1000;
+      if (max <= 2500) return 2500;
+      if (max <= 5000) return 5000;
+      if (max <= 10000) return 10000;
+      if (max <= 25000) return 25000;
+      if (max <= 50000) return 50000;
+      if (max <= 100000) return 100000;
+      // For larger values, round up to nearest power of 10
+      const magnitude = Math.pow(10, Math.ceil(Math.log10(max)));
+      return magnitude;
+    };
+
+    const niceMax = getNiceMax(maxValue * 1.1); // Add 10% padding
+
+    // Generate 5 evenly spaced ticks from 0 to niceMax
+    const tickCount = 5;
+    const tickInterval = niceMax / (tickCount - 1);
+    const ticks = Array.from({ length: tickCount }, (_, i) => Math.round(i * tickInterval));
+
+    return { yAxisTicks: ticks, domain: [0, niceMax] };
+  }, [data]);
 
   // Format Y-axis label
   const formatYLabel = (value: number) => {
-    if (value === 1) return '00';
-    if (value < 1000) return value.toString();
-    return `${(value / 1000).toFixed(0)}K`;
+    if (value === 0) return '0';
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+    return value.toString();
   };
 
-  // Calculate domain for logarithmic scale
-  const domain = useMemo(() => {
-    const values = data.map(d => Math.max(1, d.value));
-    const maxValue = Math.max(...values);
-    const calculatedMax = Math.ceil(maxValue * 1.1);
-    const finalMax = Math.max(50000, calculatedMax);
-    return [1, finalMax];
-  }, [data]);
-
-  // Filter data to ensure we have the dates we want to show
+  // Prepare chart data
   const chartData = useMemo(() => {
     return data.map(item => ({
       ...item,
-      value: Math.max(1, item.value),
+      value: Math.max(0, item.value),
     }));
   }, [data]);
 
@@ -144,12 +178,11 @@ const UserOverviewChart: React.FC<UserOverviewChartProps> = ({ data, isLoading }
             <YAxis
               type="number"
               domain={domain}
-              scale="log"
               ticks={yAxisTicks}
               tickLine={false}
               axisLine={false}
               tickFormatter={formatYLabel}
-              width={40}
+              width={45}
             />
             <ChartTooltip
               cursor={false}

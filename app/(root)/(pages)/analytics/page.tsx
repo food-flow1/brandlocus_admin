@@ -206,9 +206,9 @@ const AnalyticsPage = () => {
           <Trends chartData={dashboardData?.chartData || []} isLoading={isLoading} filterParams={dashboardParams} />
         </div>
 
-        {/* <div>
-          <KeyWord />
-        </div> */}
+        <div>
+          <KeyWord filterParams={dashboardParams} />
+        </div>
       </div>
     </div>
   );
