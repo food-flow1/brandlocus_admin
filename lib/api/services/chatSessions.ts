@@ -135,14 +135,27 @@ export interface UpdateAIResponseApiResponse {
   data: ChatMessage;
 }
 
-// Update AI response by message ID
+// Update AI response by message ID (using local proxy to avoid CORS)
 export const updateAIResponse = async (
   messageId: number,
   payload: UpdateAIResponsePayload
 ): Promise<ChatMessage> => {
-  const response = await apiClient.patch<UpdateAIResponseApiResponse>(
-    `/chats/review/${messageId}`,
-    payload
-  );
-  return response.data.data;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+  const response = await fetch(`/api/chats/review/${messageId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to update AI response');
+  }
+
+  const data: UpdateAIResponseApiResponse = await response.json();
+  return data.data;
 };
