@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import TimeRangeSelector, { TimeRange, DateRange } from '@/components/TimeRangeSelector';
 import SearchInput from '@/components/SearchInput';
 import Button from '@/components/Button';
@@ -9,6 +9,7 @@ import Pagination from '@/components/Pagination';
 import { TbCloudDownload } from 'react-icons/tb';
 import FormCard from './FormCard';
 import { useForms, FormEntry, FormsFilterParams } from '@/hooks/useForms';
+import { useDebounce } from '@/hooks/useDebounce';
 
 // Map TimeRange to API timeFilter
 const getTimeFilter = (range: TimeRange): FormsFilterParams['timeFilter'] => {
@@ -29,22 +30,32 @@ const formatDate = (date: Date): string => {
 const FormsPage = () => {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
   const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null });
-  const [searchTerm, setSearchTerm] = useState('');
+  // Local search state for immediate input feedback
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
+  
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Reset page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
 
   // Build filter params
   const filterParams = useMemo((): FormsFilterParams => {
     const params: FormsFilterParams = {
       timeFilter: getTimeFilter(selectedRange),
+      page: currentPage - 1,
+      limit: itemsPerPage,
     };
 
-    if (searchTerm) params.searchTerm = searchTerm;
+    if (debouncedSearchTerm) params.searchTerm = debouncedSearchTerm;
     if (dateRange.startDate) params.startDate = formatDate(dateRange.startDate);
     if (dateRange.endDate) params.endDate = formatDate(dateRange.endDate);
 
     return params;
-  }, [selectedRange, searchTerm, dateRange]);
+  }, [selectedRange, debouncedSearchTerm, dateRange, currentPage]);
 
   // Fetch forms data (returns both statistics and pagination)
   const { data: formsData, isLoading } = useForms(filterParams);
@@ -66,10 +77,7 @@ const FormsPage = () => {
     setCurrentPage(1);
   };
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-  };
+
 
   const columns: Column<FormEntry>[] = [
     {
@@ -183,8 +191,8 @@ const FormsPage = () => {
           <SearchInput
             placeholder="Search by name, email, company..."
             className="w-full sm:max-w-[500px]"
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            value={localSearchTerm}
+            onChange={(e) => setLocalSearchTerm(e.target.value)}
           />
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">

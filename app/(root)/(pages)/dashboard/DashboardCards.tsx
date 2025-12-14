@@ -6,42 +6,17 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { DashboardFilterParams } from '@/lib/api/services/dashboard';
 
 // Map TimeRange to API filter values
-const timeRangeToFilter: Record<TimeRange, string> = {
-    'all': '12months',
-    '30days': '30days',
-    '7days': '7days',
-    '24hour': '24hour',
-};
+// This mapping is now handled in the parent component or should be consistent
+// Ideally we accept DashboardFilterParams directly
 
-const DashboardCards = () => {
-    const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
-    const [startDate, setStartDate] = useState<string>('');
-    const [endDate, setEndDate] = useState<string>('');
 
-    // Build API params
-    const apiParams: DashboardFilterParams = useMemo(() => ({
-        filter: timeRangeToFilter[selectedRange],
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-    }), [selectedRange, startDate, endDate]);
+interface DashboardCardsProps {
+    filterParams: DashboardFilterParams;
+}
 
+const DashboardCards = ({ filterParams }: DashboardCardsProps) => {
     // Fetch dashboard data from API
-    const { data, isLoading } = useDashboard(apiParams);
-
-    // Handle date selection from date picker
-    const handleDateSelect = useCallback((date: Date) => {
-        const formattedDate = date.toISOString().split('T')[0];
-        // If no start date, set start date; otherwise set end date
-        if (!startDate) {
-            setStartDate(formattedDate);
-        } else if (!endDate) {
-            setEndDate(formattedDate);
-        } else {
-            // Reset and start over
-            setStartDate(formattedDate);
-            setEndDate('');
-        }
-    }, [startDate, endDate]);
+    const { data, isLoading } = useDashboard(filterParams);
 
     // Format number with commas
     const formatNumber = (num: number | string | undefined) => {
@@ -97,14 +72,6 @@ const DashboardCards = () => {
 
     return (
         <div className="space-y-6">
-            {/* Time Range Selector */}
-            <TimeRangeSelector
-                selectedRange={selectedRange}
-                onRangeChange={setSelectedRange}
-                onDateSelect={handleDateSelect}
-                selectedDate={startDate ? new Date(startDate) : undefined}
-            />
-
             {/* Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {isLoading ? (

@@ -1,23 +1,81 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import DashboardCards from './DashboardCards';
 import TextTemplate from '@/components/TextTemplate';
 import Button from '@/components/Button';
 import { TbCloudDownload } from 'react-icons/tb';
 import DataTable, { Column } from '@/components/DataTable';
-import { useForms, FormEntry } from '@/hooks/useForms';
+import { useForms, FormEntry, FormsFilterParams } from '@/hooks/useForms';
+import TimeRangeSelector, { TimeRange, DateRange } from '@/components/TimeRangeSelector';
+
+// Map TimeRange to API timeFilter
+const getTimeFilter = (range: TimeRange): FormsFilterParams['timeFilter'] => {
+  switch (range) {
+    case '24hour': return '7days'; // Fallback for forms
+    case '7days': return '7days';
+    case '30days': return '30days';
+    case 'all': return 'alltime';
+    default: return 'alltime';
+  }
+};
+
+// Map TimeRange to API filter values for DashboardCards
+const getTimeFilterForCards = (range: TimeRange): string => {
+    switch (range) {
+        case 'all': return '12months';
+        case '30days': return '30days';
+        case '7days': return '7days';
+        case '24hour': return '24hour';
+        default: return '12months';
+    }
+};
+
+// Format date to YYYY-MM-DD
+const formatDate = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
 
 const DashboardPage = () => {
-  // Fetch forms data with alltime filter
-  const { data: formsData, isLoading } = useForms({ timeFilter: 'alltime' });
+  const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null });
+
+  // Build filter params
+  const filterParams = useMemo((): FormsFilterParams => {
+    const params: FormsFilterParams = {
+      timeFilter: getTimeFilter(selectedRange),
+    };
+
+    if (dateRange.startDate) params.startDate = formatDate(dateRange.startDate);
+    if (dateRange.endDate) params.endDate = formatDate(dateRange.endDate);
+
+    return params;
+  }, [selectedRange, dateRange]);
+
+  // Build filter params for cards (separate because different API expectations)
+  const cardFilterParams = useMemo(() => {
+    return {
+      filter: getTimeFilterForCards(selectedRange),
+      startDate: dateRange.startDate ? formatDate(dateRange.startDate) : undefined,
+      endDate: dateRange.endDate ? formatDate(dateRange.endDate) : undefined,
+    };
+  }, [selectedRange, dateRange]);
+
+  // Fetch forms data
+  const { data: formsData, isLoading } = useForms(filterParams);
+
+  const handleDateRangeSelect = (range: DateRange) => {
+    setDateRange(range);
+  };
+
+  const handleDateRangeClear = () => {
+    setDateRange({ startDate: null, endDate: null });
+  };
 
   // Get forms list from pagination
   const forms = formsData?.pagination?.content || [];
 
-  const handleRowSelect = (selectedRows: FormEntry[]) => {
-    console.log('Selected rows:', selectedRows);
-  };
+
 
   const columns: Column<FormEntry>[] = [
     {
@@ -78,7 +136,16 @@ const DashboardPage = () => {
 
   return (
     <div className="p-2 sm:p-4 lg:p-8">
-      <DashboardCards />
+      <TimeRangeSelector
+        selectedRange={selectedRange}
+        onRangeChange={setSelectedRange}
+        showDatePicker
+        onDateRangeSelect={handleDateRangeSelect}
+        selectedDateRange={dateRange}
+        onDateRangeClear={handleDateRangeClear}
+      />
+
+      <DashboardCards filterParams={cardFilterParams} />
 
       <section className="mt-6 sm:mt-8 bg-white rounded-lg border border-gray-200">
         <aside className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 sm:p-6">
@@ -101,8 +168,7 @@ const DashboardPage = () => {
               data={forms}
               columns={columns}
               keyField="formId"
-              onRowSelect={handleRowSelect}
-              selectable={true}
+              selectable={false}
             />
           )}
         </div>

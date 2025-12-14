@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo, use, useCallback } from 'react';
+import { useState, useMemo, use, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import SearchInput from '@/components/SearchInput';
 import Button from '@/components/Button';
-import DatePicker from '@/components/DatePicker';
+import DateRangePicker, { DateRange } from '@/components/DateRangePicker';
 import { ROUTES } from '@/constants/routes';
 import { AiOutlineEdit } from 'react-icons/ai';
 import { TbCloudDownload } from 'react-icons/tb';
@@ -12,6 +12,7 @@ import { useChatDetails, useUpdateAIResponse } from '@/hooks/useChatSessions';
 import { ChatMessage, ChatDetailsFilterParams } from '@/lib/api/services/chatSessions';
 import { useToast } from '@/components/Toast';
 import { formatMessageContent } from '@/lib/utils/formatMessage';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface ChatLogDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -23,9 +24,12 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
   const { showToast } = useToast();
 
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>();
+  
+  // Search state
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
+
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -35,10 +39,10 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
   // Build API params
   const apiParams: ChatDetailsFilterParams = useMemo(() => ({
     sessionId,
-    searchTerm: appliedSearchTerm || undefined,
+    searchTerm: debouncedSearchTerm || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
-  }), [sessionId, appliedSearchTerm, startDate, endDate]);
+  }), [sessionId, debouncedSearchTerm, startDate, endDate]);
 
   // Fetch chat details from API
   const { data, isLoading, error, refetch } = useChatDetails(apiParams);
@@ -48,8 +52,7 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
 
   // Handle search
   const handleSearch = useCallback((value: string) => {
-    setSearchTerm(value);
-    setAppliedSearchTerm(value);
+    setLocalSearchTerm(value);
   }, []);
 
   // Get messages from API response (data is directly an array)
@@ -126,13 +129,25 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
     window.URL.revokeObjectURL(url);
   }, [chatMessages, sessionId]);
 
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
+  const handleDateRangeSelect = (range: DateRange) => {
+    setSelectedDateRange(range);
+    
     // Format date as YYYY-MM-DD for API
-    const formattedDate = date.toISOString().split('T')[0];
-    // Set both start and end date to the same day for single day filter
-    setStartDate(formattedDate);
-    setEndDate(formattedDate);
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    if (range.startDate && range.endDate) {
+      setStartDate(formatDate(range.startDate));
+      setEndDate(formatDate(range.endDate));
+    } else {
+      setStartDate('');
+      setEndDate('');
+    }
+    
     setIsDatePickerOpen(false);
   };
 
@@ -275,7 +290,7 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
               <div className="flex-1">
                 <SearchInput
                   placeholder="Search messages"
-                  value={searchTerm}
+                  value={localSearchTerm}
                   onSearch={handleSearch}
                 />
               </div>
@@ -294,11 +309,11 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
                   fullWidth
                   className="sm:!w-auto"
                 />
-                <DatePicker
+                <DateRangePicker
                   isOpen={isDatePickerOpen}
                   onClose={() => setIsDatePickerOpen(false)}
-                  onDateSelect={handleDateSelect}
-                  selectedDate={selectedDate}
+                  onDateRangeSelect={handleDateRangeSelect}
+                  selectedRange={selectedDateRange}
                   position="right"
                 />
               </div>

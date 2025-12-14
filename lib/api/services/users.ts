@@ -49,8 +49,8 @@ const buildQueryParams = (params: UsersFilterParams): string => {
   if (params.timeFilter) queryParams.append('timeFilter', params.timeFilter);
   if (params.state) queryParams.append('state', params.state);
   if (params.country) queryParams.append('country', params.country);
-  if (params.page) queryParams.append('page', String(params.page));
-  if (params.limit) queryParams.append('limit', String(params.limit));
+  if (params.page !== undefined) queryParams.append('page', String(params.page));
+  if (params.limit !== undefined) queryParams.append('limit', String(params.limit));
 
   return queryParams.toString();
 };
