@@ -9,7 +9,7 @@ export const chatSessionsKeys = {
   lists: () => [...chatSessionsKeys.all, 'list'] as const,
   list: (params: ChatSessionsFilterParams) => [...chatSessionsKeys.lists(), params] as const,
   details: () => [...chatSessionsKeys.all, 'detail'] as const,
-  detail: (id: number) => [...chatSessionsKeys.details(), id] as const,
+  detail: (params: ChatDetailsFilterParams) => [...chatSessionsKeys.details(), params] as const,
 };
 
 // Hook to fetch chat sessions with filters
@@ -29,7 +29,7 @@ export function useChatDetails(params: ChatDetailsFilterParams) {
   const token = useAuthToken();
 
   return useQuery({
-    queryKey: chatSessionsKeys.detail(params.sessionId),
+    queryKey: chatSessionsKeys.detail(params),
     queryFn: () => chatSessionsApi.getChatDetails(params),
     enabled: !!token && !!params.sessionId,
   });

@@ -1,24 +1,23 @@
 'use client';
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Button from '@/components/Button';
 import DataTable, { Column } from '@/components/DataTable';
 import Pagination from '@/components/Pagination';
 import SearchInput from '@/components/SearchInput';
 import TimeRangeSelector, { TimeRange } from '@/components/TimeRangeSelector';
 import { ROUTES } from '@/constants/routes';
-import { IoEyeOutline, IoFilter } from 'react-icons/io5';
-import { TbCloudDownload } from 'react-icons/tb';
-import { ChevronDown } from 'lucide-react';
-import { useChatSessions, useExportChatSessions } from '@/hooks/useChatSessions';
+import { IoEyeOutline } from 'react-icons/io5';
+import { useChatSessions } from '@/hooks/useChatSessions';
 import { ChatSessionsFilterParams, ChatSession } from '@/lib/api/services/chatSessions';
 import { stripMarkdown } from '@/lib/utils/formatMessage';
+import { useDebounce } from '@/hooks/useDebounce';
+import ExportMenu from '@/components/ExportMenu';
+import Button from '@/components/Button';
 
 // Filter state interface
 interface FilterState {
   searchTerm: string;
-  sessionId: string;
   startDate: string;
   endDate: string;
 }
@@ -27,37 +26,30 @@ const ChatLogPage = () => {
   const router = useRouter();
   const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const filterDropdownRef = useRef<HTMLDivElement>(null);
   const itemsPerPage = 10;
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        setShowFilterDropdown(false);
-      }
-    };
-
-    if (showFilterDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showFilterDropdown]);
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
     searchTerm: '',
-    sessionId: '',
     startDate: '',
     endDate: '',
   });
 
-  // Temp filter state for dropdown
-  const [tempFilters, setTempFilters] = useState<FilterState>(filters);
+  // Local search state for immediate input feedback
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
+
+  // Update filters when debounced search term changes
+  useEffect(() => {
+    setFilters(prev => {
+      if (prev.searchTerm === debouncedSearchTerm) return prev;
+      return { ...prev, searchTerm: debouncedSearchTerm };
+    });
+    // Only reset page if search term actually changed
+    if (filters.searchTerm !== debouncedSearchTerm) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchTerm]);
 
   // Map TimeRange to API timeFilter
   const getTimeFilter = (range: TimeRange): ChatSessionsFilterParams['timeFilter'] => {
@@ -73,64 +65,51 @@ const ChatLogPage = () => {
   // Build API params from current state
   const apiParams: ChatSessionsFilterParams = useMemo(() => ({
     searchTerm: filters.searchTerm || undefined,
-    sessionId: filters.sessionId ? parseInt(filters.sessionId) : undefined,
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
     timeFilter: getTimeFilter(selectedRange),
-  }), [filters, selectedRange]);
+    page: currentPage - 1,
+    size: itemsPerPage,
+  }), [filters, selectedRange, currentPage]);
 
   // Fetch chat sessions
   const { data, isLoading, error, refetch } = useChatSessions(apiParams);
-  const exportChatSessionsMutation = useExportChatSessions();
 
   // Extract data from response - API returns { content: [], page, size, totalElements, totalPages, last }
   const chatSessions = data?.content || [];
   const totalItems = data?.totalElements || 0;
 
-  // Count active filters (excluding searchTerm)
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (filters.sessionId) count++;
-    if (filters.startDate) count++;
-    if (filters.endDate) count++;
-    return count;
-  }, [filters]);
-
   // Handlers
   const handleSearch = useCallback((value: string) => {
-    setFilters(prev => ({ ...prev, searchTerm: value }));
-    setCurrentPage(1);
+    setLocalSearchTerm(value);
   }, []);
 
-  const handleToggleFilters = useCallback(() => {
-    if (!showFilterDropdown) {
-      setTempFilters(filters);
+  const handleDateRangeSelect = useCallback((range: { startDate: Date | null; endDate: Date | null }) => {
+    if (range.startDate && range.endDate) {
+      const formatDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      setFilters(prev => ({
+        ...prev,
+        startDate: formatDate(range.startDate!),
+        endDate: formatDate(range.endDate!),
+      }));
+      setCurrentPage(1);
     }
-    setShowFilterDropdown(prev => !prev);
-  }, [filters, showFilterDropdown]);
+  }, []);
 
-  const handleApplyFilters = useCallback(() => {
-    setFilters(tempFilters);
-    setShowFilterDropdown(false);
-    setCurrentPage(1);
-  }, [tempFilters]);
-
-  const handleClearFilters = useCallback(() => {
-    const emptyFilters: FilterState = {
-      searchTerm: '',
-      sessionId: '',
+  const handleDateRangeClear = useCallback(() => {
+    setFilters(prev => ({
+      ...prev,
       startDate: '',
       endDate: '',
-    };
-    setTempFilters(emptyFilters);
-    setFilters(emptyFilters);
-    setShowFilterDropdown(false);
+    }));
     setCurrentPage(1);
   }, []);
-
-  const handleExport = useCallback(() => {
-    exportChatSessionsMutation.mutate(apiParams);
-  }, [apiParams, exportChatSessionsMutation]);
 
   const columns: Column<ChatSession>[] = [
     {
@@ -201,6 +180,16 @@ const ChatLogPage = () => {
       <TimeRangeSelector
         selectedRange={selectedRange}
         onRangeChange={setSelectedRange}
+        onDateRangeSelect={handleDateRangeSelect}
+        onDateRangeClear={handleDateRangeClear}
+        selectedDateRange={
+          filters.startDate && filters.endDate
+            ? {
+                startDate: new Date(filters.startDate),
+                endDate: new Date(filters.endDate),
+              }
+            : undefined
+        }
       />
 
       <section className="mt-6 sm:mt-8 bg-white rounded-lg border border-gray-200">
@@ -208,120 +197,12 @@ const ChatLogPage = () => {
           <SearchInput
             placeholder="Search by name or question"
             className="w-full sm:max-w-[500px]"
-            value={filters.searchTerm}
+            value={localSearchTerm}
             onSearch={handleSearch}
           />
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            {/* Filter Dropdown */}
-            <div className="relative" ref={filterDropdownRef}>
-              <button
-                onClick={handleToggleFilters}
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-all duration-200 ${
-                  showFilterDropdown || activeFiltersCount > 0
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <IoFilter size={18} />
-                <span>Filters</span>
-                {activeFiltersCount > 0 && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-xs text-white">
-                    {activeFiltersCount}
-                  </span>
-                )}
-                <ChevronDown
-                  size={16}
-                  className={`transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`}
-                />
-              </button>
-
-              {/* Filter Dropdown Panel */}
-              {showFilterDropdown && (
-                <div className="absolute right-0 sm:left-0 top-full mt-2 w-80 rounded-xl border border-gray-200 bg-white shadow-lg z-50 overflow-hidden">
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-                    <span className="text-sm font-semibold text-gray-900">Filter Sessions</span>
-                    {activeFiltersCount > 0 && (
-                      <button
-                        onClick={handleClearFilters}
-                        className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
-                      >
-                        Clear all
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Filter Fields */}
-                  <div className="p-4 space-y-4">
-                    {/* Session ID */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                        Session ID
-                      </label>
-                      <input
-                        type="number"
-                        value={tempFilters.sessionId}
-                        onChange={(e) => setTempFilters(prev => ({ ...prev, sessionId: e.target.value }))}
-                        placeholder="Enter session ID"
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    {/* Date Range */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                        Date Range
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={tempFilters.startDate}
-                            onChange={(e) => setTempFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                          />
-                          <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] text-gray-400">From</span>
-                        </div>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={tempFilters.endDate}
-                            onChange={(e) => setTempFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                          />
-                          <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] text-gray-400">To</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="flex items-center justify-end gap-2 px-4 py-3 bg-gray-50 border-t border-gray-100">
-                    <button
-                      onClick={() => setShowFilterDropdown(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleApplyFilters}
-                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <Button
-              icon={<TbCloudDownload size={20} />}
-              text={exportChatSessionsMutation.isPending ? 'Exporting...' : 'Export'}
-              variant="primary"
-              onClick={handleExport}
-              disabled={exportChatSessionsMutation.isPending}
-            />
+            <ExportMenu data={chatSessions} dname="Chat_Logs" />
           </div>
         </aside>
 
@@ -364,4 +245,3 @@ const ChatLogPage = () => {
 };
 
 export default ChatLogPage;
-

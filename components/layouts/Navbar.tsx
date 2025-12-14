@@ -44,7 +44,7 @@ const Navbar = () => {
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Notifications */}
         <div className="relative">
-          <button
+          {/* <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative flex items-center justify-center rounded-lg p-1.5 sm:p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
             aria-label="Notifications"
@@ -55,7 +55,7 @@ const Navbar = () => {
                 {notificationCount}
               </span>
             )}
-          </button>
+          </button> */}
 
           {/* Notifications Dropdown */}
           {showNotifications && (

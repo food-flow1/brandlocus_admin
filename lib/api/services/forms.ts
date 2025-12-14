@@ -83,8 +83,8 @@ const buildQueryParams = (params: FormsFilterParams): string => {
   if (params.timeFilter) queryParams.append('timeFilter', params.timeFilter);
   if (params.startDate) queryParams.append('startDate', params.startDate);
   if (params.endDate) queryParams.append('endDate', params.endDate);
-  if (params.page) queryParams.append('page', String(params.page));
-  if (params.limit) queryParams.append('limit', String(params.limit));
+  if (params.page !== undefined) queryParams.append('page', String(params.page));
+  if (params.limit !== undefined) queryParams.append('limit', String(params.limit));
 
   return queryParams.toString();
 };

@@ -9,10 +9,11 @@ import Button from '@/components/Button';
 import DataTable, { Column } from '@/components/DataTable';
 import Pagination from '@/components/Pagination';
 import { IoFilter } from 'react-icons/io5';
-import { TbCloudDownload } from 'react-icons/tb';
 import { ChevronDown } from 'lucide-react';
-import { useUsers, useExportUsers } from '@/hooks/useUsers';
+import { useUsers } from '@/hooks/useUsers';
 import { UsersFilterParams, User } from '@/lib/api/services/users';
+import { useDebounce } from '@/hooks/useDebounce';
+import ExportMenu from '@/components/ExportMenu';
 
 // Extended User type for table display
 interface UserEntry extends User {
@@ -124,6 +125,22 @@ const UsersPage = () => {
     endDate: '',
   });
 
+  // Local search state for immediate input feedback
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
+
+  // Update filters when debounced search term changes
+  useEffect(() => {
+    setFilters(prev => {
+      if (prev.searchTerm === debouncedSearchTerm) return prev;
+      return { ...prev, searchTerm: debouncedSearchTerm };
+    });
+    // Only reset page if search term actually changed
+    if (filters.searchTerm !== debouncedSearchTerm) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchTerm]);
+
   // Temp filter state for dropdown
   const [tempFilters, setTempFilters] = useState<FilterState>(filters);
 
@@ -187,6 +204,7 @@ const UsersPage = () => {
       params.country = filters.country.trim();
     }
     
+    
     // Only include dates if they have valid values
     if (filters.startDate && filters.startDate.trim() && filters.startDate !== '') {
       params.startDate = filters.startDate.trim();
@@ -195,13 +213,16 @@ const UsersPage = () => {
     if (filters.endDate && filters.endDate.trim() && filters.endDate !== '') {
       params.endDate = filters.endDate.trim();
     }
+
+    // Pagination
+    params.page = currentPage - 1;
+    params.limit = itemsPerPage;
     
     return params;
-  }, [filters, selectedRange]);
+  }, [filters, selectedRange, currentPage]);
 
   // API hooks
   const { data: usersResponse, isLoading, error, refetch } = useUsers(apiParams);
-  const exportUsersMutation = useExportUsers();
 
   // Get users data
   const users: UserEntry[] = useMemo(() => {
@@ -216,8 +237,7 @@ const UsersPage = () => {
 
   // Handlers
   const handleSearch = useCallback((value: string) => {
-    setFilters(prev => ({ ...prev, searchTerm: value }));
-    setCurrentPage(1);
+    setLocalSearchTerm(value);
   }, []);
 
   const handleTimeRangeChange = useCallback((range: TimeRange) => {
@@ -298,17 +318,12 @@ const UsersPage = () => {
   }, [nigeriaData?.name]);
 
 
-  const handleExport = useCallback(() => {
-    exportUsersMutation.mutate(apiParams);
-  }, [apiParams, exportUsersMutation]);
-
   // Active filters count
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (filters.state) count++;
     if (filters.country) count++;
-    if (filters.startDate) count++;
-    if (filters.endDate) count++;
+    // Date filters are now top-level, so we don't count them here
     return count;
   }, [filters]);
 
@@ -327,10 +342,11 @@ const UsersPage = () => {
       <TimeRangeSelector
         selectedRange={selectedRange}
         onRangeChange={handleTimeRangeChange}
-        showDatePicker={true}
+        showDatePicker={false}
         onDateRangeSelect={handleDateRangeSelect}
         onDateRangeClear={handleDateRangeClear}
         selectedDateRange={dateRange}
+        
       />
 
       <section className="mt-6 sm:mt-8 bg-white rounded-lg border border-gray-200">
@@ -338,7 +354,7 @@ const UsersPage = () => {
           <SearchInput
             placeholder="Search by name, email, or phone"
             className="w-full sm:max-w-[500px]"
-            value={filters.searchTerm}
+            value={localSearchTerm}
             onSearch={handleSearch}
           />
 
@@ -437,33 +453,6 @@ const UsersPage = () => {
                         }
                       />
                     </div>
-
-                    {/* Date Range */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                        Date Range
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={tempFilters.startDate}
-                            onChange={(e) => setTempFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                          />
-                          <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] text-gray-400">From</span>
-                        </div>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={tempFilters.endDate}
-                            onChange={(e) => setTempFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                          />
-                          <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] text-gray-400">To</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Footer */}
@@ -486,13 +475,7 @@ const UsersPage = () => {
             </div>
 
      
-            <Button
-              icon={<TbCloudDownload size={20} />}
-              text={exportUsersMutation.isPending ? 'Exporting...' : 'Export'}
-              variant="primary"
-              onClick={handleExport}
-              disabled={exportUsersMutation.isPending}
-            />
+            <ExportMenu data={users} dname="Users" />
           </div>
         </aside>
 
@@ -606,4 +589,3 @@ const UsersPage = () => {
 };
 
 export default UsersPage;
-
