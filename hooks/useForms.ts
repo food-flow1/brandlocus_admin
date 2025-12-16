@@ -12,13 +12,13 @@ export const formsKeys = {
 };
 
 // Hook to fetch forms with filters (returns both statistics and pagination)
-export function useForms(params: FormsFilterParams = {}) {
+export function useForms(params: FormsFilterParams = {}, options?: { enabled?: boolean }) {
   const token = useAuthToken();
 
   return useQuery({
     queryKey: formsKeys.list(params),
     queryFn: () => formsApi.getForms(params),
-    enabled: !!token,
+    enabled: !!token && (options?.enabled ?? true),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }

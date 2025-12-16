@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import TimeRangeSelector, { TimeRange, DateRange } from '@/components/TimeRangeSelector';
 import { UserOverviewChart } from '@/components/charts';
 import { useDashboard } from '@/hooks/useDashboard';
+import { useForms, FormsFilterParams } from '@/hooks/useForms';
 import Trends from './Trends';
 import KeyWord from './KeyWord';
 
@@ -57,6 +58,90 @@ const AnalyticsPage = () => {
   // Fetch dashboard data
   const { data: dashboardData, isLoading } = useDashboard(dashboardParams);
 
+  // --- Forms Data Logic Start ---
+  
+  // Map dashboard filters to forms filters
+  const formsFilterParams: FormsFilterParams = useMemo(() => {
+    let timeFilter: FormsFilterParams['timeFilter'] = 'alltime';
+    if (dashboardParams.filter === '7days') timeFilter = '7days';
+    else if (dashboardParams.filter === '30days') timeFilter = '30days';
+    else if (dashboardParams.filter === '12months') timeFilter = '12months';
+    else if (dashboardParams.filter === '24hour') timeFilter = '7days'; // Fallback
+
+    return {
+        timeFilter,
+        startDate: dashboardParams.startDate,
+        endDate: dashboardParams.endDate
+    };
+  }, [dashboardParams]);
+
+  // Fetch current forms data
+  const { data: formsData, isLoading: isFormsLoading } = useForms(formsFilterParams);
+
+  // Calculate date helpers for previous period (duplicated logic for safety)
+  const getPreviousPeriod = (currentParams: FormsFilterParams, filterType: string | undefined): FormsFilterParams | null => {
+      if (!filterType || filterType === 'alltime' || filterType === '12months') {
+          // logic placeholder
+      }
+
+      const now = new Date();
+      const endDate = currentParams.endDate ? new Date(currentParams.endDate) : now;
+      
+      let daysToSubtract = 0;
+      if (filterType === '24hour') daysToSubtract = 1;
+      else if (filterType === '7days') daysToSubtract = 7;
+      else if (filterType === '30days') daysToSubtract = 30;
+      else if (filterType === '12months') daysToSubtract = 365;
+      else return null;
+
+      // Current Start Date
+      const startDate = currentParams.startDate 
+          ? new Date(currentParams.startDate) 
+          : new Date(endDate.getTime() - (daysToSubtract * 24 * 60 * 60 * 1000));
+
+      // Previous End Date = Current Start Date
+      const prevEndDate = new Date(startDate);
+      
+      // Previous Start Date = Previous End Date - Duration
+      const prevStartDate = new Date(prevEndDate.getTime() - (daysToSubtract * 24 * 60 * 60 * 1000));
+      
+      return {
+          timeFilter: undefined,
+          startDate: prevStartDate.toISOString().split('T')[0],
+          endDate: prevEndDate.toISOString().split('T')[0]
+      };
+  };
+
+  const previousFilterParams = useMemo(() => {
+      return getPreviousPeriod(formsFilterParams, dashboardParams.filter);
+  }, [formsFilterParams, dashboardParams.filter]);
+
+  // Fetch previous forms data
+  const { data: prevFormsData } = useForms(previousFilterParams || {}, { 
+      enabled: !!previousFilterParams 
+  });
+
+  // Calculate forms change
+  const formSubmissionsChange = useMemo(() => {
+      const currentCount = formsData?.pagination?.totalElements || 0;
+      if (!previousFilterParams || prevFormsData?.pagination?.totalElements === undefined) return 0;
+      
+      const prevCount = prevFormsData.pagination.totalElements;
+      if (prevCount === 0) return currentCount > 0 ? 100 : 0; 
+      
+      return ((currentCount - prevCount) / prevCount) * 100;
+  }, [formsData, prevFormsData, previousFilterParams]);
+
+  // --- Forms Data Logic End ---
+
+
+  // Format number
+  const formatNumber = (num: number | string | undefined) => {
+    if (num === undefined || num === null) return '0';
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    return n.toLocaleString();
+  };
+
   // Format change value as percentage string
   const formatChange = (change: number | undefined): string => {
     if (change === undefined || change === null) return '0%';
@@ -91,6 +176,19 @@ const AnalyticsPage = () => {
         </svg>
 
       ),
+    },
+    {
+        label: 'Form Submissions',
+        value: formatNumber(formsData?.pagination?.totalElements),
+        change: formatChange(formSubmissionsChange),
+        changeType: getChangeType(formSubmissionsChange),
+        icon: (
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="44" height="44" rx="22" fill="#DEDEFA" />
+                <rect x="2" y="2" width="44" height="44" rx="22" stroke="#EFEFFD" strokeWidth="4" />
+                <path d="M11.4 23.7999C11.5051 23.8787 11.6246 23.936 11.7518 23.9686C11.879 24.0012 12.0114 24.0084 12.1414 23.9898C12.2714 23.9712 12.3965 23.9272 12.5095 23.8603C12.6225 23.7934 12.7212 23.7049 12.8 23.5999C13.4055 22.7926 14.1906 22.1374 15.0931 21.6861C15.9957 21.2348 16.9909 20.9999 18 20.9999C19.0091 20.9999 20.0043 21.2348 20.9069 21.6861C21.8094 22.1374 22.5945 22.7926 23.2 23.5999C23.3593 23.8118 23.5963 23.9519 23.8588 23.9891C24.1214 24.0264 24.388 23.9579 24.6 23.7986C24.6756 23.7424 24.7425 23.6754 24.7987 23.5999C25.4042 22.7926 26.1893 22.1374 27.0919 21.6861C27.9944 21.2348 28.9897 20.9999 29.9988 20.9999C31.0078 20.9999 32.0031 21.2348 32.9056 21.6861C33.8082 22.1374 34.5933 22.7926 35.1987 23.5999C35.358 23.812 35.5951 23.9522 35.8578 23.9896C36.1204 24.027 36.3872 23.9585 36.5994 23.7992C36.8115 23.6399 36.9518 23.4029 36.9891 23.1402C37.0265 22.8775 36.958 22.6108 36.7987 22.3986C35.9136 21.2119 34.7332 20.2776 33.375 19.6886C34.1196 19.0088 34.6413 18.1197 34.8716 17.1381C35.1019 16.1565 35.03 15.1282 34.6654 14.1881C34.3009 13.2481 33.6606 12.4402 32.8287 11.8706C31.9967 11.3009 31.012 10.9961 30.0037 10.9961C28.9955 10.9961 28.0108 11.3009 27.1788 11.8706C26.3469 12.4402 25.7066 13.2481 25.3421 14.1881C24.9775 15.1282 24.9056 16.1565 25.1359 17.1381C25.3662 18.1197 25.8879 19.0088 26.6325 19.6886C25.6518 20.1127 24.7609 20.7198 24.0075 21.4774C23.2541 20.7198 22.3632 20.1127 21.3825 19.6886C22.1271 19.0088 22.6488 18.1197 22.8791 17.1381C23.1094 16.1565 23.0375 15.1282 22.6729 14.1881C22.3084 13.2481 21.6681 12.4402 20.8362 11.8706C20.0042 11.3009 19.0195 10.9961 18.0112 10.9961C17.003 10.9961 16.0183 11.3009 15.1863 11.8706C14.3544 12.4402 13.7141 13.2481 13.3496 14.1881C12.985 15.1282 12.9131 16.1565 13.1434 17.1381C13.3737 18.1197 13.8954 19.0088 14.64 19.6886C13.2758 20.2757 12.0896 21.2106 11.2 22.3999C11.1212 22.5049 11.0639 22.6245 11.0313 22.7517C10.9987 22.8789 10.9915 23.0113 11.0101 23.1413C11.0286 23.2713 11.0726 23.3964 11.1395 23.5094C11.2064 23.6224 11.2949 23.7211 11.4 23.7999ZM30 12.9999C30.5933 12.9999 31.1734 13.1758 31.6667 13.5055C32.1601 13.8351 32.5446 14.3036 32.7716 14.8518C32.9987 15.4 33.0581 16.0032 32.9424 16.5851C32.8266 17.1671 32.5409 17.7016 32.1213 18.1212C31.7018 18.5407 31.1672 18.8265 30.5853 18.9422C30.0033 19.058 29.4001 18.9986 28.8519 18.7715C28.3038 18.5444 27.8352 18.1599 27.5056 17.6666C27.1759 17.1732 27 16.5932 27 15.9999C27 15.2042 27.3161 14.4411 27.8787 13.8785C28.4413 13.3159 29.2044 12.9999 30 12.9999ZM18 12.9999C18.5933 12.9999 19.1734 13.1758 19.6667 13.5055C20.1601 13.8351 20.5446 14.3036 20.7716 14.8518C20.9987 15.4 21.0581 16.0032 20.9424 16.5851C20.8266 17.1671 20.5409 17.7016 20.1213 18.1212C19.7018 18.5407 19.1672 18.8265 18.5853 18.9422C18.0033 19.058 17.4001 18.9986 16.8519 18.7715C16.3038 18.5444 15.8352 18.1599 15.5056 17.6666C15.1759 17.1732 15 16.5932 15 15.9999C15 15.2042 15.3161 14.4411 15.8787 13.8785C16.4413 13.3159 17.2044 12.9999 18 12.9999ZM33.375 32.6886C34.1196 32.0088 34.6413 31.1197 34.8716 30.1381C35.1019 29.1565 35.03 28.1282 34.6654 27.1881C34.3009 26.2481 33.6606 25.4402 32.8287 24.8706C31.9967 24.3009 31.012 23.9961 30.0037 23.9961C28.9955 23.9961 28.0108 24.3009 27.1788 24.8706C26.3469 25.4402 25.7066 26.2481 25.3421 27.1881C24.9775 28.1282 24.9056 29.1565 25.1359 30.1381C25.3662 31.1197 25.8879 32.0088 26.6325 32.6886C25.6518 33.1127 24.7609 33.7198 24.0075 34.4774C23.2541 33.7198 22.3632 33.1127 21.3825 32.6886C22.1271 32.0088 22.6488 31.1197 22.8791 30.1381C23.1094 29.1565 23.0375 28.1282 22.6729 27.1881C22.3084 26.2481 21.6681 25.4402 20.8362 24.8706C20.0042 24.3009 19.0195 23.9961 18.0112 23.9961C17.003 23.9961 16.0183 24.3009 15.1863 24.8706C14.3544 25.4402 13.7141 26.2481 13.3496 27.1881C12.985 28.1282 12.9131 29.1565 13.1434 30.1381C13.3737 31.1197 13.8954 32.0088 14.64 32.6886C13.2758 20.2757 12.0896 21.2106 11.2 22.3999C11.1212 22.5049 11.0639 22.6245 11.0313 22.7517C10.9987 22.8789 10.9915 23.0113 11.0101 23.1413C11.0286 23.2713 11.0726 23.3964 11.1395 23.5094C11.2064 23.6224 11.2949 23.7211 11.4 23.7999ZM30 12.9999C30.5933 12.9999 31.1734 13.1758 31.6667 13.5055C32.1601 13.8351 32.5446 14.3036 32.7716 14.8518C32.9987 15.4 33.0581 16.0032 32.9424 16.5851C32.8266 17.1671 32.5409 17.7016 32.1213 18.1212C31.7018 18.5407 31.1672 18.8265 30.5853 18.9422C30.0033 19.058 29.4001 18.9986 28.8519 18.7715C28.3038 18.5444 27.8352 18.1599 27.5056 17.6666C27.1759 17.1732 27 16.5932 27 15.9999C27 15.2042 27.3161 14.4411 27.8787 13.8785C28.4413 13.3159 29.2044 12.9999 30 12.9999ZM18 12.9999C18.5933 12.9999 19.1734 13.1758 19.6667 13.5055C20.1601 13.8351 20.5446 14.3036 20.7716 14.8518C20.9987 15.4 21.0581 16.0032 20.9424 16.5851C20.8266 17.1671 20.5409 17.7016 20.1213 18.1212C19.7018 18.5407 19.1672 18.8265 18.5853 18.9422C18.0033 19.058 17.4001 18.9986 16.8519 18.7715C16.3038 18.5444 15.8352 18.1599 15.5056 17.6666C15.1759 17.1732 15 16.5932 15 15.9999C15 15.2042 15.3161 14.4411 15.8787 13.8785C16.4413 13.3159 17.2044 12.9999 18 12.9999ZM33.375 32.6886C34.1196 32.0088 34.6413 31.1197 34.8716 30.1381C35.1019 29.1565 35.03 28.1282 34.6654 27.1881C34.3009 26.2481 33.6606 25.4402 32.8287 24.8706C31.9967 24.3009 31.012 23.9961 30.0037 23.9961C28.9955 23.9961 28.0108 24.3009 27.1788 24.8706C26.3469 25.4402 25.7066 26.2481 25.3421 27.1881C24.9775 28.1282 24.9056 29.1565 25.1359 30.1381C25.3662 31.1197 25.8879 32.0088 26.6325 32.6886C25.6518 33.1127 24.7609 33.7198 24.0075 34.4774C23.2541 33.7198 22.3632 33.1127 21.3825 32.6886Z" fill="#5C59E8" />
+            </svg>
+        ),
     },
     {
       label: 'Active Users',
