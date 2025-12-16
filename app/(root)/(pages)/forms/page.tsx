@@ -81,14 +81,10 @@ const FormsPage = () => {
 
   const columns: Column<FormEntry>[] = [
     {
-      key: 'firstName',
-      label: 'First Name',
+      key: 'name',
+      label: 'Name',
       sortable: true,
-    },
-    {
-      key: 'lastName',
-      label: 'Last Name',
-      sortable: true,
+      render: (_, row) => `${row.firstName} ${row.lastName}`,
     },
     {
       key: 'email',
@@ -106,9 +102,20 @@ const FormsPage = () => {
       sortable: true,
     },
     {
-      key: 'source',
-      label: 'Source',
+      key: 'message',
+      label: 'Message',
       sortable: true,
+      render: (value: string) => (
+        <span className="truncate max-w-[200px] block" title={value}>
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: 'submittedAt',
+      label: 'Date Created',
+      sortable: true,
+      render: (value: string | null) => value ? new Date(value).toLocaleDateString() : '-',
     },
     // {
     //   key: 'actions',
@@ -143,12 +150,11 @@ const FormsPage = () => {
     };
 
     // Convert data to CSV
-    const headers = ['First Name', 'Last Name', 'Email', 'Company Name', 'Service Needed', 'Message', 'Status', 'Date Submitted'];
+    const headers = ['Name', 'Email', 'Company Name', 'Service Needed', 'Message', 'Status', 'Date Submitted'];
     const csvRows = [
       headers.join(','),
       ...forms.map(row => [
-        escapeCSV(row.firstName),
-        escapeCSV(row.lastName),
+        escapeCSV(`${row.firstName} ${row.lastName}`),
         escapeCSV(row.email),
         escapeCSV(row.companyName),
         escapeCSV(row.serviceNeeded),
@@ -184,7 +190,7 @@ const FormsPage = () => {
         onDateRangeClear={handleDateRangeClear}
       />
 
-      <FormCard statistics={statistics} isLoading={isLoading} />
+      <FormCard statistics={statistics} isLoading={isLoading} totalElements={totalItems} />
 
       <section className="mt-6 sm:mt-8 bg-white rounded-lg border border-gray-200">
         <aside className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 sm:p-6">

@@ -1,4 +1,4 @@
-import { FileText, BarChart3, Tag, Grid3X3, TrendingUp, ClipboardList, LucideIcon } from 'lucide-react'
+import { FileText, BarChart3, Tag, Grid3X3, TrendingUp, ClipboardList, LucideIcon, HelpCircle } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -16,19 +16,24 @@ interface FormStat {
 interface FormCardProps {
   statistics?: FormStatistics;
   isLoading?: boolean;
+  totalElements?: number;
 }
 
 // Build form stats from API statistics
-const getFormStats = (stats?: FormStatistics): FormStat[] => {
-  const totalForms = stats
+const getFormStats = (stats?: FormStatistics, totalElements?: number): FormStat[] => {
+  const total = totalElements ?? 0;
+  
+  const knownTotal = stats
     ? (stats.businessDevelopment + stats.brandDevelopment + stats.capacityBuilding +
        stats.tradeAndInvestmentFacilitation + stats.businessQuest)
     : 0;
 
+  const others = Math.max(0, total - knownTotal);
+
   return [
     {
       title: 'Total Forms Submitted',
-      value: totalForms,
+      value: total,
       icon: FileText,
       iconBg: 'bg-gray-100',
       iconColor: 'text-gray-600',
@@ -68,54 +73,79 @@ const getFormStats = (stats?: FormStatistics): FormStat[] => {
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-500',
     },
+    {
+      title: 'Others',
+      value: others,
+      icon: HelpCircle,
+      iconBg: 'bg-gray-100',
+      iconColor: 'text-gray-500', 
+    },
   ];
 };
 
-const FormCard = ({ statistics, isLoading }: FormCardProps) => {
-  const formStats = getFormStats(statistics);
+const FormCard = ({ statistics, isLoading, totalElements }: FormCardProps) => {
+  const formStats = getFormStats(statistics, totalElements);
+  
+  // Split stats into top (3) and bottom (4) rows
+  const topRowStats = formStats.slice(0, 3);
+  const bottomRowStats = formStats.slice(3, 7);
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 my-4 sm:my-6">
-        {[...Array(6)].map((_, index) => (
-          <Card key={index}>
-            <CardContent className="px-4 sm:px-6 py-3 sm:py-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-2 sm:space-y-3 min-w-0 flex-1">
-                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-                </div>
-                <div className="p-2 sm:p-3 rounded-full bg-gray-200 animate-pulse w-10 h-10" />
+  const StatCard = ({ stat, loading }: { stat?: FormStat; loading?: boolean }) => {
+    if (loading) {
+      return (
+        <Card>
+          <CardContent className="px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-2 sm:space-y-3 min-w-0 flex-1">
+                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              <div className="p-2 sm:p-3 rounded-full bg-gray-200 animate-pulse w-10 h-10" />
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    if (!stat) return null;
+    const Icon = stat.icon;
+    
+    return (
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-2 sm:space-y-3 min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">{stat.title}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stat.value}</p>
+            </div>
+            <div className={`p-2 sm:p-3 rounded-full ${stat.iconBg} flex-shrink-0`}>
+              <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.iconColor}`} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
-  }
+  };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 my-4 sm:my-6">
-      {formStats.map((stat) => {
-        const Icon = stat.icon
-        return (
-          <Card key={stat.title} className="hover:shadow-md transition-shadow">
-            <CardContent className="px-4 sm:px-6 py-3 sm:py-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-2 sm:space-y-3 min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">{stat.title}</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-                <div className={`p-2 sm:p-3 rounded-full ${stat.iconBg} flex-shrink-0`}>
-                  <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.iconColor}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )
-      })}
+    <div className="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6">
+      {/* Top Row: 3 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {isLoading 
+          ? [...Array(3)].map((_, i) => <StatCard key={`top-loading-${i}`} loading />)
+          : topRowStats.map((stat) => <StatCard key={stat.title} stat={stat} />)
+        }
+      </div>
+      
+      {/* Bottom Row: 4 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {isLoading
+          ? [...Array(4)].map((_, i) => <StatCard key={`bottom-loading-${i}`} loading />)
+          : bottomRowStats.map((stat) => <StatCard key={stat.title} stat={stat} />)
+        }
+      </div>
     </div>
-  )
+  );
 }
 
 export default FormCard

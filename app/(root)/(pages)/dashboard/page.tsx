@@ -22,13 +22,13 @@ const getTimeFilter = (range: TimeRange): FormsFilterParams['timeFilter'] => {
 
 // Map TimeRange to API filter values for DashboardCards
 const getTimeFilterForCards = (range: TimeRange): string => {
-    switch (range) {
-        case 'all': return '12months';
-        case '30days': return '30days';
-        case '7days': return '7days';
-        case '24hour': return '24hour';
-        default: return '12months';
-    }
+  switch (range) {
+    case 'all': return '12months';
+    case '30days': return '30days';
+    case '7days': return '7days';
+    case '24hour': return '24hour';
+    default: return '12months';
+  }
 };
 
 // Format date to YYYY-MM-DD
@@ -79,13 +79,14 @@ const DashboardPage = () => {
 
   const columns: Column<FormEntry>[] = [
     {
-      key: 'firstName',
-      label: 'First Name',
+      key: 'name',
+      label: 'Name',
       sortable: true,
+      render: (_, row) => `${row.firstName} ${row.lastName}`,
     },
     {
-      key: 'lastName',
-      label: 'Last Name',
+      key: 'email',
+      label: 'Email',
       sortable: true,
     },
     {
@@ -99,6 +100,16 @@ const DashboardPage = () => {
       sortable: true,
     },
     {
+      key: 'message',
+      label: 'Message',
+      sortable: true,
+      render: (value: string) => (
+        <span className="truncate max-w-[200px] block" title={value}>
+          {value || '-'}
+        </span>
+      ),
+    },
+    {
       key: 'submittedAt',
       label: 'Date Created',
       sortable: true,
@@ -110,14 +121,15 @@ const DashboardPage = () => {
     if (forms.length === 0) return;
 
     // Convert data to CSV
-    const headers = ['First Name', 'Last Name', 'Company Name', 'Service Needed', 'Date Created'];
+    const headers = ['Name', 'Email', 'Company Name', 'Service Needed', 'Message', 'Date Created'];
     const csvRows = [
       headers.join(','),
       ...forms.map((row: FormEntry) => [
-        row.firstName,
-        row.lastName,
+        `${row.firstName} ${row.lastName}`,
+        row.email,
         row.companyName,
         row.serviceNeeded,
+        row.message,
         row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : '',
       ].map(cell => `"${cell || ''}"`).join(','))
     ];
@@ -136,14 +148,16 @@ const DashboardPage = () => {
 
   return (
     <div className="p-2 sm:p-4 lg:p-8">
-      <TimeRangeSelector
-        selectedRange={selectedRange}
-        onRangeChange={setSelectedRange}
-        showDatePicker
-        onDateRangeSelect={handleDateRangeSelect}
-        selectedDateRange={dateRange}
-        onDateRangeClear={handleDateRangeClear}
-      />
+      <div className="mb-6">
+        <TimeRangeSelector
+          selectedRange={selectedRange}
+          onRangeChange={setSelectedRange}
+          showDatePicker
+          onDateRangeSelect={handleDateRangeSelect}
+          selectedDateRange={dateRange}
+          onDateRangeClear={handleDateRangeClear}
+        />
+      </div>
 
       <DashboardCards filterParams={cardFilterParams} />
 
