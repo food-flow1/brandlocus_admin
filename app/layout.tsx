@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { ReactQueryProvider } from "@/lib/react-query/provider";
+import { ToastProvider } from "@/components/Toast";
 
 const interTight = localFont({
   src: [
@@ -116,7 +117,9 @@ export default function RootLayout({
         className={`${interTight.variable} antialiased`}
       >
         <ReactQueryProvider>
-        {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </ReactQueryProvider>
       </body>
     </html>

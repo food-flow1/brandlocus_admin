@@ -7,6 +7,7 @@ import { ICONS } from '@/constants';
 import { ROUTES } from '@/constants/routes';
 import { useLogin } from '@/hooks/useAuth';
 import { LuEye, LuEyeClosed } from 'react-icons/lu';
+import { useToast } from '@/components/Toast';
 
 const LoginPage = () => {
   const router = useRouter();
@@ -16,6 +17,7 @@ const LoginPage = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   // const [rememberMe, setRememberMe] = useState(false);
   const loginMutation = useLogin();
+  const { showToast } = useToast();
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -37,6 +39,11 @@ const LoginPage = () => {
     } catch (error) {
       // Error is handled by the mutation
       console.error('Login failed:', error);
+      if (error instanceof Error) {
+        showToast(error.message, 'error');
+      } else {
+        showToast('Login failed. Please check your credentials.', 'error');
+      }
     }
   };
 

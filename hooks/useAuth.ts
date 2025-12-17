@@ -14,7 +14,13 @@ export function useLogin() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: (payload: LoginPayload) => authApi.login(payload),
+    mutationFn: async (payload: LoginPayload) => {
+      const data = await authApi.login(payload);
+      if (data.data.role !== 'ADMIN') {
+        throw new Error('Access denied: You must be an administrator to log in.');
+      }
+      return data;
+    },
     onSuccess: (data) => {
       // Store authentication data in localStorage
       if (typeof window !== 'undefined' && data.data) {
