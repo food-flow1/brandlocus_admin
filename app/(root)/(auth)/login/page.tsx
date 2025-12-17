@@ -144,6 +144,7 @@ const LoginPage = () => {
             >
               Password <span className="text-red-500">*</span>
             </label>
+            
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
