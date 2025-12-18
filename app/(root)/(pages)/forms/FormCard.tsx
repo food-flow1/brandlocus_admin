@@ -1,4 +1,4 @@
-import { FileText, BarChart3, Tag, Grid3X3, TrendingUp, ClipboardList, LucideIcon, HelpCircle } from 'lucide-react'
+import { FileText, BarChart3, Tag, Grid3X3, TrendingUp, ClipboardList, LucideIcon, HelpCircle, Megaphone, Mail } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -23,12 +23,13 @@ interface FormCardProps {
 const getFormStats = (stats?: FormStatistics, totalElements?: number): FormStat[] => {
   const total = totalElements ?? 0;
   
-  const knownTotal = stats
-    ? (stats.businessDevelopment + stats.brandDevelopment + stats.capacityBuilding +
-       stats.tradeAndInvestmentFacilitation + stats.businessQuest)
-    : 0;
+  // const knownTotal = stats
+  //   ? (stats.businessDevelopment + stats.brandDevelopment + stats.capacityBuilding +
+  //      stats.tradeAndInvestmentFacilitation + stats.businessQuest)
+  //   : 0;
 
-  const others = Math.max(0, total - knownTotal);
+  // const others = Math.max(0, total - knownTotal);
+  const others = stats?.others ?? 0;
 
   return [
     {
@@ -74,6 +75,20 @@ const getFormStats = (stats?: FormStatistics, totalElements?: number): FormStat[
       iconColor: 'text-blue-500',
     },
     {
+      title: 'Marketing Consulting',
+      value: stats?.marketingConsulting || 0,
+      icon: Megaphone,
+      iconBg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+    },
+    {
+      title: 'Contact',
+      value: stats?.contact || 0,
+      icon: Mail,
+      iconBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600',
+    },
+    {
       title: 'Others',
       value: others,
       icon: HelpCircle,
@@ -86,9 +101,10 @@ const getFormStats = (stats?: FormStatistics, totalElements?: number): FormStat[
 const FormCard = ({ statistics, isLoading, totalElements }: FormCardProps) => {
   const formStats = getFormStats(statistics, totalElements);
   
-  // Split stats into top (3) and bottom (4) rows
-  const topRowStats = formStats.slice(0, 3);
-  const bottomRowStats = formStats.slice(3, 7);
+  // Split stats into 3 rows of 3
+  const row1Stats = formStats.slice(0, 3);
+  const row2Stats = formStats.slice(3, 6);
+  const row3Stats = formStats.slice(6, 9);
 
   const StatCard = ({ stat, loading }: { stat?: FormStat; loading?: boolean }) => {
     if (loading) {
@@ -129,19 +145,27 @@ const FormCard = ({ statistics, isLoading, totalElements }: FormCardProps) => {
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4 my-4 sm:my-6">
-      {/* Top Row: 3 cards */}
+      {/* Row 1: 3 cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {isLoading 
-          ? [...Array(3)].map((_, i) => <StatCard key={`top-loading-${i}`} loading />)
-          : topRowStats.map((stat) => <StatCard key={stat.title} stat={stat} />)
+          ? [...Array(3)].map((_, i) => <StatCard key={`row1-loading-${i}`} loading />)
+          : row1Stats.map((stat) => <StatCard key={stat.title} stat={stat} />)
         }
       </div>
       
-      {/* Bottom Row: 4 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Row 2: 3 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {isLoading
-          ? [...Array(4)].map((_, i) => <StatCard key={`bottom-loading-${i}`} loading />)
-          : bottomRowStats.map((stat) => <StatCard key={stat.title} stat={stat} />)
+          ? [...Array(3)].map((_, i) => <StatCard key={`row2-loading-${i}`} loading />)
+          : row2Stats.map((stat) => <StatCard key={stat.title} stat={stat} />)
+        }
+      </div>
+
+      {/* Row 3: 3 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {isLoading
+          ? [...Array(3)].map((_, i) => <StatCard key={`row3-loading-${i}`} loading />)
+          : row3Stats.map((stat) => <StatCard key={stat.title} stat={stat} />)
         }
       </div>
     </div>

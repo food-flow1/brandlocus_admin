@@ -9,7 +9,12 @@ import Pagination from '@/components/Pagination';
 import { TbCloudDownload } from 'react-icons/tb';
 import FormCard from './FormCard';
 import { useForms, FormEntry, FormsFilterParams } from '@/hooks/useForms';
+import { formsApi } from '@/lib/api/services/forms';
 import { useDebounce } from '@/hooks/useDebounce';
+import { AiOutlineEye } from 'react-icons/ai';
+import FormDetailsModal from '@/components/modals/FormDetailsModal';
+import ExportMenu from '@/components/ExportMenu';
+
 
 // Map TimeRange to API timeFilter
 const getTimeFilter = (range: TimeRange): FormsFilterParams['timeFilter'] => {
@@ -78,6 +83,14 @@ const FormsPage = () => {
   };
 
 
+  // State for view modal
+  const [selectedForm, setSelectedForm] = useState<FormEntry | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+  const handleView = (form: FormEntry) => {
+    setSelectedForm(form);
+    setIsViewModalOpen(true);
+  };
 
   const columns: Column<FormEntry>[] = [
     {
@@ -100,13 +113,18 @@ const FormsPage = () => {
       key: 'serviceNeeded',
       label: 'Service Needed',
       sortable: true,
+      render: (value: string) => (
+        <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
+          {value.replace(/_/g, ' ').toLowerCase()}
+        </span>
+      ),
     },
     {
       key: 'message',
       label: 'Message',
       sortable: true,
       render: (value: string) => (
-        <span className="truncate max-w-[200px] block" title={value}>
+        <span className="truncate max-w-[200px] block text-gray-500" title={value}>
           {value}
         </span>
       ),
@@ -117,63 +135,40 @@ const FormsPage = () => {
       sortable: true,
       render: (value: string | null) => value ? new Date(value).toLocaleDateString() : '-',
     },
-    // {
-    //   key: 'actions',
-    //   label: 'Actions',
-    //   sortable: false,
-    //   render: (_, row) => (
-    //     <button
-    //       onClick={(e) => {
-    //         e.stopPropagation();
-    //         router.push(`/forms/${row.formId}`);
-    //       }}
-    //       className="flex items-center cursor-pointer gap-2 text-blue-600 hover:text-blue-800 transition-colors"
-    //     >
-    //       <AiOutlineEye size={18} />
-    //       <span>View</span>
-    //     </button>
-    //   ),
-    // },
+    {
+      key: 'actions',
+      label: 'Actions',
+      sortable: false,
+      render: (_, row) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleView(row);
+          }}
+          className="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors"
+          title="View Details"
+        >
+          <AiOutlineEye size={18} />
+        </button>
+      ),
+    },
   ];
 
-  const handleExport = () => {
-    if (forms.length === 0) return;
-
-    // Helper to escape CSV values
-    const escapeCSV = (value: string | null | undefined) => {
-      if (!value) return '';
-      const escaped = String(value).replace(/"/g, '""');
-      if (escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')) {
-        return `"${escaped}"`;
-      }
-      return escaped;
-    };
-
-    // Convert data to CSV
-    const headers = ['Name', 'Email', 'Company Name', 'Service Needed', 'Message', 'Status', 'Date Submitted'];
-    const csvRows = [
-      headers.join(','),
-      ...forms.map(row => [
-        escapeCSV(`${row.firstName} ${row.lastName}`),
-        escapeCSV(row.email),
-        escapeCSV(row.companyName),
-        escapeCSV(row.serviceNeeded),
-        escapeCSV(row.message),
-        escapeCSV(row.status),
-        escapeCSV(row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : ''),
-      ].join(','))
-    ];
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `forms-export-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+  const handleExport = async () => {
+    const { page, limit, ...exportParams } = filterParams;
+    const response = await formsApi.exportForms(exportParams);
+    
+    // Extract data and map to clean object for spreadsheet
+    const rawData = response.data || [];
+    
+    return rawData.map((row: FormEntry) => ({
+      'Name': `${row.firstName} ${row.lastName}`,
+      'E-mail': row.email,
+      'Company Name': row.companyName,
+      'Service Needed': row.serviceNeeded?.replace(/_/g, ' ')?.toLowerCase() || '-',
+      'Message': row.message || '-',
+      'Date Created': row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : '-'
+    }));
   };
 
   return (
@@ -203,7 +198,7 @@ const FormsPage = () => {
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             {/* <Button icon={<IoFilter size={20} />} text="Filters" onClick={handleFilters} /> */}
-            <Button icon={<TbCloudDownload size={20} />} text="Export" variant="primary" onClick={handleExport} />
+            <ExportMenu onExport={handleExport} dname="Forms" disabled={forms.length === 0} />
           </div>
         </aside>
 
@@ -252,6 +247,12 @@ const FormsPage = () => {
           )}
         </div>
       </section>
+
+      <FormDetailsModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        data={selectedForm}
+      />
     </div>
   );
 };

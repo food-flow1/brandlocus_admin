@@ -14,6 +14,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { UsersFilterParams, User } from '@/lib/api/services/users';
 import { useDebounce } from '@/hooks/useDebounce';
 import ExportMenu from '@/components/ExportMenu';
+import { usersApi } from '@/lib/api/services/users';
 
 // Extended User type for table display
 interface UserEntry extends User {
@@ -328,10 +329,37 @@ const UsersPage = () => {
   }, [filters]);
 
   const columns: Column<UserEntry>[] = [
-    { key: 'firstName', label: 'First Name', sortable: true },
-    { key: 'lastName', label: 'Last Name', sortable: true },
+    {
+      key: 'firstName',
+      label: 'Name',
+      sortable: true,
+      render: (_, row) => (
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {row.profileImageUrl ? (
+              <img src={row.profileImageUrl} alt={`${row.firstName} ${row.lastName}`} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-sm font-semibold text-green-700">
+                {row.firstName?.[0]}{row.lastName?.[0]}
+              </span>
+            )}
+          </div>
+          <span className="font-medium text-gray-900">{`${row.firstName} ${row.lastName}`}</span>
+        </div>
+      ),
+    },
     { key: 'email', label: 'E-mail', sortable: false },
     { key: 'businessName', label: 'Business Name', sortable: true },
+    {
+      key: 'businessBrief',
+      label: 'Business Brief',
+      sortable: true,
+      render: (value: string) => (
+        <span className="truncate max-w-[200px] block" title={value}>
+          {value || '-'}
+        </span>
+      ),
+    },
     { key: 'industryName', label: 'Industry', sortable: true },
     { key: 'state', label: 'State', sortable: true },
     { key: 'country', label: 'Country', sortable: true },
@@ -475,7 +503,27 @@ const UsersPage = () => {
             </div>
 
      
-            <ExportMenu data={users} dname="Users" />
+            <ExportMenu 
+              onExport={async () => {
+                const { page, limit, ...exportParams } = apiParams;
+                const response = await usersApi.exportUsers(exportParams);
+                
+                // Extract data and map to clean object for spreadsheet
+                const rawData = response.data || [];
+                
+                return rawData.map((row: User) => ({
+                  'Name': `${row.firstName} ${row.lastName}`,
+                  'E-mail': row.email || '-',
+                  'Business Name': row.businessName || '-',
+                  'Business Brief': row.businessBrief || '-',
+                  'Industry': row.industryName || '-',
+                  'State': row.state || '-',
+                  'Country': row.country || '-',
+                }));
+              }} 
+              dname="Users" 
+              disabled={users.length === 0} 
+            />
           </div>
         </aside>
 

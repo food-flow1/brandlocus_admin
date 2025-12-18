@@ -9,6 +9,7 @@ export interface User {
   email: string;
   industryName: string;
   businessName: string;
+  businessBrief: string;
   profileImageUrl: string | null;
   role: string;
   state: string;
@@ -83,11 +84,11 @@ export const usersApi = {
     return response.data;
   },
 
-  // Export users
-  exportUsers: async (params: UsersFilterParams = {}): Promise<Blob> => {
+  // Export users (Returns JSON now for professional processing)
+  exportUsers: async (params: UsersFilterParams = {}): Promise<ApiResponse<User[]>> => {
     const queryString = buildQueryParams(params);
     const url = queryString ? `/users/export?${queryString}` : '/users/export';
-    const response = await apiClient.get(url, { responseType: 'blob' });
+    const response = await apiClient.get<ApiResponse<User[]>>(url);
     return response.data;
   },
 };

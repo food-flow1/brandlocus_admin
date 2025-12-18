@@ -409,7 +409,7 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
             {/* Action Buttons */}
             <div className="grid grid-cols-1 gap-3 pt-4 border-t border-gray-200">
             
-              <Button
+              {/* <Button
                 icon={<TbCloudDownload size={18} className="sm:w-5 sm:h-5" />}
                 text="Export"
                 variant="primary"
@@ -417,7 +417,7 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
                 disabled={chatMessages.length === 0}
                 fullWidth
                 className="sm:!w-auto"
-              />
+              /> */}
             </div>
           </div>
         </div>
