@@ -14,6 +14,7 @@ export interface FormEntry {
   isActive: boolean | null;
   submittedAt: string | null;
   repliedAt: string | null;
+  industryName: string | null;
   source?: string;
 }
 

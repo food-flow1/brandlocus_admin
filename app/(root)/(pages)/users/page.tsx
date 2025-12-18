@@ -15,6 +15,8 @@ import { UsersFilterParams, User } from '@/lib/api/services/users';
 import { useDebounce } from '@/hooks/useDebounce';
 import ExportMenu from '@/components/ExportMenu';
 import { usersApi } from '@/lib/api/services/users';
+import { AiOutlineEye } from 'react-icons/ai';
+import UserDetailsModal from '@/components/modals/UserDetailsModal';
 
 // Extended User type for table display
 interface UserEntry extends User {
@@ -92,6 +94,8 @@ const UsersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null });
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserEntry | null>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const itemsPerPage = 10;
 
@@ -360,10 +364,32 @@ const UsersPage = () => {
         </span>
       ),
     },
-    { key: 'industryName', label: 'Industry', sortable: true },
+    { key: 'industryName', label: 'Sector', sortable: true },
     { key: 'state', label: 'State', sortable: true },
     { key: 'country', label: 'Country', sortable: true },
+    {
+      key: 'actions',
+      label: 'Actions',
+      sortable: false,
+      render: (_, row) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleView(row);
+          }}
+          className="flex items-center cursor-pointer justify-center p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors"
+          title="View Details"
+        >
+          <AiOutlineEye size={18} />
+        </button>
+      ),
+    },
   ];
+
+  const handleView = (user: UserEntry) => {
+    setSelectedUser(user);
+    setIsViewModalOpen(true);
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -532,8 +558,8 @@ const UsersPage = () => {
             <div className="overflow-x-auto bg-white">
               {/* Table Header Skeleton */}
               <div className="border-b border-gray-200 bg-gray-50">
-                <div className="grid grid-cols-7 gap-4 px-4 sm:px-6 py-3">
-                  {[...Array(7)].map((_, i) => (
+                <div className="grid grid-cols-8 gap-4 px-4 sm:px-6 py-3">
+                  {[...Array(8)].map((_, i) => (
                     <div key={i} className="h-4 bg-gray-200 rounded animate-pulse" />
                   ))}
                 </div>
@@ -544,8 +570,8 @@ const UsersPage = () => {
                   key={rowIndex}
                   className={`border-b border-gray-100 ${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                 >
-                  <div className="grid grid-cols-7 gap-4 px-4 sm:px-6 py-4">
-                    {[...Array(7)].map((_, colIndex) => (
+                  <div className="grid grid-cols-8 gap-4 px-4 sm:px-6 py-4">
+                    {[...Array(8)].map((_, colIndex) => (
                       <div
                         key={colIndex}
                         className="h-4 bg-gray-200 rounded animate-pulse"
@@ -632,6 +658,12 @@ const UsersPage = () => {
           </div>
         </div>
       </section>
+
+      <UserDetailsModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        data={selectedUser}
+      />
     </div>
   );
 };
