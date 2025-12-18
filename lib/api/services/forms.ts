@@ -28,6 +28,9 @@ export interface FormStatistics {
   capacityBuilding: number;
   tradeAndInvestmentFacilitation: number;
   businessQuest: number;
+  marketingConsulting: number;
+  contact: number;
+  others: number;
 }
 
 // Pagination data
@@ -75,6 +78,15 @@ export interface FormsApiResponse {
   data: FormsResponseData;
 }
 
+export interface FormsExportApiResponse {
+  requestTime: string;
+  requestType: string;
+  referenceId: string;
+  status: boolean;
+  message: string;
+  data: FormEntry[];
+}
+
 // Helper to build query params
 const buildQueryParams = (params: FormsFilterParams): string => {
   const queryParams = new URLSearchParams();
@@ -106,12 +118,11 @@ export const formsApi = {
     return response.data.data;
   },
 
-  // Export forms to CSV
-  exportForms: async (params: FormsFilterParams = {}): Promise<Blob> => {
+  // Export forms to CSV (Returns JSON now for professional processing)
+  exportForms: async (params: FormsFilterParams = {}): Promise<FormsExportApiResponse> => {
     const queryString = buildQueryParams(params);
     const url = `/forms/export${queryString ? `?${queryString}` : ''}`;
-    const response = await apiClient.get(url, { responseType: 'blob' });
+    const response = await apiClient.get<FormsExportApiResponse>(url);
     return response.data;
   },
 };
-

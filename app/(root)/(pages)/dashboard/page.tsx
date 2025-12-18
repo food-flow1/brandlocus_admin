@@ -8,6 +8,13 @@ import { TbCloudDownload } from 'react-icons/tb';
 import DataTable, { Column } from '@/components/DataTable';
 import { useForms, FormEntry, FormsFilterParams } from '@/hooks/useForms';
 import TimeRangeSelector, { TimeRange, DateRange } from '@/components/TimeRangeSelector';
+import { AiOutlineEye } from 'react-icons/ai';
+import FormDetailsModal from '@/components/modals/FormDetailsModal';
+import { useDebounce } from '@/hooks/useDebounce';
+import { formsApi } from '@/lib/api/services/forms';
+import ExportMenu from '@/components/ExportMenu';
+import { usersApi } from '@/lib/api/services/users';
+
 
 // Map TimeRange to API timeFilter
 const getTimeFilter = (range: TimeRange): FormsFilterParams['timeFilter'] => {
@@ -76,6 +83,14 @@ const DashboardPage = () => {
   const forms = formsData?.pagination?.content || [];
 
 
+  // State for view modal
+  const [selectedForm, setSelectedForm] = useState<FormEntry | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+  const handleView = (form: FormEntry) => {
+    setSelectedForm(form);
+    setIsViewModalOpen(true);
+  };
 
   const columns: Column<FormEntry>[] = [
     {
@@ -98,6 +113,11 @@ const DashboardPage = () => {
       key: 'serviceNeeded',
       label: 'Service Needed',
       sortable: true,
+      render: (value: string) => (
+        <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
+          {value.replace(/_/g, ' ').toLowerCase()}
+        </span>
+      ),
     },
     {
       key: 'message',
@@ -115,36 +135,40 @@ const DashboardPage = () => {
       sortable: true,
       render: (value: string | null) => value ? new Date(value).toLocaleDateString() : '-',
     },
+    {
+      key: 'actions',
+      label: 'Actions',
+      sortable: false,
+      render: (_, row) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleView(row);
+          }}
+          className="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors"
+          title="View Details"
+        >
+          <AiOutlineEye size={18} />
+        </button>
+      ),
+    },
   ];
 
-  const handleExport = useCallback(() => {
-    if (forms.length === 0) return;
-
-    // Convert data to CSV
-    const headers = ['Name', 'Email', 'Company Name', 'Service Needed', 'Message', 'Date Created'];
-    const csvRows = [
-      headers.join(','),
-      ...forms.map((row: FormEntry) => [
-        `${row.firstName} ${row.lastName}`,
-        row.email,
-        row.companyName,
-        row.serviceNeeded,
-        row.message,
-        row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : '',
-      ].map(cell => `"${cell || ''}"`).join(','))
-    ];
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `conversion-pipeline-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  }, [forms]);
+  const handleExport = async () => {
+    const response = await formsApi.exportForms(filterParams);
+    
+    // Extract data and map to clean object for spreadsheet
+    const rawData = response.data || [];
+    
+    return rawData.map((row: FormEntry) => ({
+      'Name': `${row.firstName} ${row.lastName}`,
+      'E-mail': row.email || '-',
+      'Company Name': row.companyName || '-',
+      'Service Needed': row.serviceNeeded?.replace(/_/g, ' ')?.toLowerCase() || '-',
+      'Message': row.message || '-',
+      'Date Created': row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : '-'
+    }));
+  };
 
   return (
     <div className="p-2 sm:p-4 lg:p-8">
@@ -168,7 +192,7 @@ const DashboardPage = () => {
             subtitle="Track, filter, and manage all client inquiries across services and industries" />
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            <Button icon={<TbCloudDownload size={20} />} text="Export CSV" variant='primary' onClick={handleExport} />
+            <ExportMenu onExport={handleExport} dname="Conversion Pipeline" disabled={forms.length === 0} />
           </div>
         </aside>
 
@@ -187,6 +211,12 @@ const DashboardPage = () => {
           )}
         </div>
       </section>
+
+      <FormDetailsModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        data={selectedForm}
+      />
     </div>
   );
 };

@@ -201,9 +201,9 @@ const ChatLogPage = () => {
             onSearch={handleSearch}
           />
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          {/* <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <ExportMenu data={chatSessions} dname="Chat_Logs" />
-          </div>
+          </div> */}
         </aside>
 
         <div>
