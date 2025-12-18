@@ -113,14 +113,19 @@ const FormsPage = () => {
       key: 'industryName',
       label: 'Sector',
       sortable: true,
-      render: (value: string | null) => value || '-',
+      // render: (value: string | null) => value || '-',
+      render: (value: string) => (
+        <span className="truncate capitalize block text-gray-500" title={value}>
+          {value}
+        </span>
+      ),
     },
     {
       key: 'serviceNeeded',
       label: 'Service Needed',
       sortable: true,
       render: (value: string) => (
-        <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
+        <span className="inline-flex items-center px-2 capitalize py-0.5 text-sm font-medium rounded-full bg-blue-50 text-blue-700">
           {value.replace(/_/g, ' ').toLowerCase() || "null"}
         </span>
       ),
