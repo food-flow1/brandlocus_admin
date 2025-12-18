@@ -110,6 +110,12 @@ const DashboardPage = () => {
       sortable: true,
     },
     {
+      key: 'industryName',
+      label: 'Industry',
+      sortable: true,
+      render: (value: string | null) => value || '-',
+    },
+    {
       key: 'serviceNeeded',
       label: 'Service Needed',
       sortable: true,
@@ -164,6 +170,7 @@ const DashboardPage = () => {
       'Name': `${row.firstName} ${row.lastName}`,
       'E-mail': row.email || '-',
       'Company Name': row.companyName || '-',
+      'Industry': row.industryName || '-',
       'Service Needed': row.serviceNeeded?.replace(/_/g, ' ')?.toLowerCase() || '-',
       'Message': row.message || '-',
       'Date Created': row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : '-'

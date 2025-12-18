@@ -38,7 +38,7 @@ const FormsPage = () => {
   // Local search state for immediate input feedback
   const [localSearchTerm, setLocalSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -110,12 +110,18 @@ const FormsPage = () => {
       sortable: true,
     },
     {
+      key: 'industryName',
+      label: 'Sector',
+      sortable: true,
+      render: (value: string | null) => value || '-',
+    },
+    {
       key: 'serviceNeeded',
       label: 'Service Needed',
       sortable: true,
       render: (value: string) => (
         <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-          {value.replace(/_/g, ' ').toLowerCase()}
+          {value.replace(/_/g, ' ').toLowerCase() || "null"}
         </span>
       ),
     },
@@ -145,7 +151,7 @@ const FormsPage = () => {
             e.stopPropagation();
             handleView(row);
           }}
-          className="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors"
+          className="flex items-center cursor-pointer justify-center p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors"
           title="View Details"
         >
           <AiOutlineEye size={18} />
@@ -157,14 +163,15 @@ const FormsPage = () => {
   const handleExport = async () => {
     const { page, limit, ...exportParams } = filterParams;
     const response = await formsApi.exportForms(exportParams);
-    
+
     // Extract data and map to clean object for spreadsheet
     const rawData = response.data || [];
-    
+
     return rawData.map((row: FormEntry) => ({
       'Name': `${row.firstName} ${row.lastName}`,
       'E-mail': row.email,
       'Company Name': row.companyName,
+      'Industry': row.industryName || '-',
       'Service Needed': row.serviceNeeded?.replace(/_/g, ' ')?.toLowerCase() || '-',
       'Message': row.message || '-',
       'Date Created': row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : '-'

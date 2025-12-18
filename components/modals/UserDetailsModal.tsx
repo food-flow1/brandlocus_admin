@@ -9,12 +9,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { FormEntry } from '@/lib/api/services/forms';
+import { User } from '@/lib/api/services/users';
 
-interface FormDetailsModalProps {
+interface UserDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data: FormEntry | null;
+  data: User | null;
 }
 
 const DetailRow = ({ label, value, className = '' }: { label: string; value: React.ReactNode; className?: string }) => (
@@ -24,7 +24,7 @@ const DetailRow = ({ label, value, className = '' }: { label: string; value: Rea
   </div>
 );
 
-const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
+const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   isOpen,
   onClose,
   data,
@@ -36,7 +36,7 @@ const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
       <AlertDialogContent className="max-w-2xl w-[95%] p-0 overflow-hidden max-h-[90vh] flex flex-col">
         <AlertDialogHeader className="px-6 py-4 border-b border-gray-100 flex flex-row items-center justify-between space-y-0 sticky top-0 bg-white z-10">
           <AlertDialogTitle className="text-xl font-semibold text-gray-900">
-            Form Details
+            User Details
           </AlertDialogTitle>
           <AlertDialogCancel 
             onClick={onClose}
@@ -48,39 +48,43 @@ const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
         </AlertDialogHeader>
 
         <div className="px-6 py-4 overflow-y-auto">
-          <div className="space-y-1">
-            <DetailRow label="Form ID" value={data.formId} />
-            <DetailRow label="Full Name" value={`${data.firstName} ${data.lastName}`} />
-            <DetailRow label="Email" value={data.email} />
-            <DetailRow label="Company Name" value={data.companyName} />
-            <DetailRow label="Industry" value={data.industryName} />
-            <DetailRow 
-              label="Service Needed" 
-              value={
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {data.serviceNeeded.replace(/_/g, ' ')}
+          <div className="flex flex-col items-center mb-6 pt-2">
+            <div className="h-24 w-24 rounded-full bg-green-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-sm mb-3">
+              {data.profileImageUrl ? (
+                <img src={data.profileImageUrl} alt={`${data.firstName} ${data.lastName}`} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-2xl font-bold text-green-700">
+                  {data.firstName?.[0]}{data.lastName?.[0]}
                 </span>
-              } 
-            />
-            <DetailRow 
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">{`${data.firstName} ${data.lastName}`}</h3>
+            <p className="text-sm text-gray-500">{data.email}</p>
+          </div>
+
+          <div className="space-y-1">
+            <DetailRow label="User ID" value={data.userId} />
+            <DetailRow label="Business Name" value={data.businessName} />
+            <DetailRow label="Business Brief" value={<p className="whitespace-pre-wrap">{data.businessBrief}</p>} />
+            <DetailRow label="Industry" value={data.industryName} />
+            <DetailRow label="Country" value={data.country} />
+            <DetailRow label="State" value={data.state} />
+            <DetailRow label="Role" value={
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {data.role}
+              </span>
+            } />
+            {/* <DetailRow 
               label="Status" 
               value={
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  data.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  (data as any).status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {data.status}
+                  {(data as any).status || 'INACTIVE'}
                 </span>
               } 
-            />
-            <DetailRow 
-              label="Submitted At" 
-              value={data.submittedAt ? new Date(data.submittedAt).toLocaleString() : '-'} 
-            />
-            <DetailRow 
-              label="Message" 
-              value={<p className="whitespace-pre-wrap">{data.message}</p>} 
               className="border-b-0"
-            />
+            /> */}
           </div>
         </div>
 
@@ -97,4 +101,4 @@ const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
   );
 };
 
-export default FormDetailsModal;
+export default UserDetailsModal;
