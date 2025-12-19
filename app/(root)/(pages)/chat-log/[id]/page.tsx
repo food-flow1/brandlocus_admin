@@ -103,17 +103,31 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
     };
 
     // Build CSV content
-    const headers = ['Message ID', 'User Type', 'Content', 'Timestamp', 'Name', 'Industry', 'Business'];
+    // Build CSV content
+    const headers = [
+      'Session ID',
+      'Message ID',
+      'User Type',
+      'Chat Type',
+      'Content',
+      'Name',
+      'Industry Name',
+      'Business Name',
+      'Created At'
+    ];
+    
     const csvRows = [
       headers.join(','),
       ...chatMessages.map(msg => [
+        escapeCSV(String(msg.sessionId)),
         escapeCSV(String(msg.messageId)),
         escapeCSV(msg.userType),
+        escapeCSV(msg.chatType),
         escapeCSV(msg.content),
-        escapeCSV(msg.createdAt || ''),
         escapeCSV(msg.name || ''),
         escapeCSV(msg.industryName || ''),
         escapeCSV(msg.businessName || ''),
+        escapeCSV(msg.createdAt ? new Date(msg.createdAt).toLocaleString() : ''),
       ].join(','))
     ];
 
@@ -409,15 +423,15 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
             {/* Action Buttons */}
             <div className="grid grid-cols-1 gap-3 pt-4 border-t border-gray-200">
             
-              {/* <Button
+              <Button
                 icon={<TbCloudDownload size={18} className="sm:w-5 sm:h-5" />}
-                text="Export"
+                text="Export CSV"
                 variant="primary"
                 onClick={handleExport}
                 disabled={chatMessages.length === 0}
                 fullWidth
                 className="sm:!w-auto"
-              /> */}
+              />
             </div>
           </div>
         </div>

@@ -31,6 +31,7 @@ export interface FormStatistics {
   businessQuest: number;
   marketingConsulting: number;
   contact: number;
+  playTest: number;
   others: number;
 }
 

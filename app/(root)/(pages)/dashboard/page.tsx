@@ -170,6 +170,8 @@ const DashboardPage = () => {
     
     // Extract data and map to clean object for spreadsheet
     const rawData = response.data || [];
+
+    console.log(rawData);
     
     return rawData.map((row: FormEntry) => ({
       'Name': `${row.firstName} ${row.lastName}`,
