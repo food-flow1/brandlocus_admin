@@ -7,6 +7,7 @@ export interface PaginationProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  onItemsPerPageChange?: (itemsPerPage: number) => void;
   maxVisiblePages?: number;
 }
 
@@ -15,6 +16,7 @@ const Pagination: React.FC<PaginationProps> = ({
   totalItems,
   itemsPerPage,
   onPageChange,
+  onItemsPerPageChange,
   maxVisiblePages = 3,
 }) => {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -67,11 +69,41 @@ const Pagination: React.FC<PaginationProps> = ({
     return null;
   }
 
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newItemsPerPage = parseInt(e.target.value, 10);
+    if (onItemsPerPageChange) {
+      onItemsPerPageChange(newItemsPerPage);
+    }
+  };
+
   return (
     <div className="flex items-center justify-between py-4">
-      {/* Left side - Showing text */}
-      <div className="text-sm text-gray-600">
-        Showing {startItem}-{endItem} from {totalItems}
+      {/* Left side - Showing text and rows per page selector */}
+      <div className="flex items-center gap-4">
+        <div className="text-sm text-gray-600">
+          Showing {startItem}-{endItem} from {totalItems}
+        </div>
+        
+        {onItemsPerPageChange && (
+          <div className="flex items-center gap-2">
+            <label htmlFor="rows-per-page" className="text-sm text-gray-600">
+              Rows per page:
+            </label>
+            <select
+              id="rows-per-page"
+              value={itemsPerPage}
+              onChange={handleItemsPerPageChange}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent cursor-pointer hover:border-gray-400 transition-colors"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={30}>30</option>
+              <option value={40}>40</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Right side - Pagination controls */}

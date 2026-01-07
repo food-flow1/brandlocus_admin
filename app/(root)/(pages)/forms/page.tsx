@@ -40,7 +40,7 @@ const FormsPage = () => {
   const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Reset page when search term changes
   useEffect(() => {
@@ -60,7 +60,7 @@ const FormsPage = () => {
     if (dateRange.endDate) params.endDate = formatDate(dateRange.endDate);
 
     return params;
-  }, [selectedRange, debouncedSearchTerm, dateRange, currentPage]);
+  }, [selectedRange, debouncedSearchTerm, dateRange, currentPage, itemsPerPage]);
 
   // Fetch forms data (returns both statistics and pagination)
   const { data: formsData, isLoading } = useForms(filterParams);
@@ -253,6 +253,10 @@ const FormsPage = () => {
                   totalItems={totalItems}
                   itemsPerPage={itemsPerPage}
                   onPageChange={setCurrentPage}
+                  onItemsPerPageChange={(newItemsPerPage) => {
+                    setItemsPerPage(newItemsPerPage);
+                    setCurrentPage(1);
+                  }}
                 />
               </div>
             </>
