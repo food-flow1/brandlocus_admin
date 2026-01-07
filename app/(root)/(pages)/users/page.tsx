@@ -97,7 +97,7 @@ const UsersPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserEntry | null>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -224,7 +224,7 @@ const UsersPage = () => {
     params.limit = itemsPerPage;
     
     return params;
-  }, [filters, selectedRange, currentPage]);
+  }, [filters, selectedRange, currentPage, itemsPerPage]);
 
   // API hooks
   const { data: usersResponse, isLoading, error, refetch } = useUsers(apiParams);
@@ -654,6 +654,10 @@ const UsersPage = () => {
               totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
+              onItemsPerPageChange={(newItemsPerPage) => {
+                setItemsPerPage(newItemsPerPage);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </div>

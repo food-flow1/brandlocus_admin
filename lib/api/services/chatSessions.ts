@@ -8,7 +8,7 @@ export interface ChatSessionsFilterParams {
   endDate?: string;
   timeFilter?: 'alltime' | '30days' | '7days' | '24hours';
   page?: number;
-  size?: number;
+  limit?: number;
 }
 
 // Chat session interface (list view)
@@ -78,7 +78,7 @@ export const getChatSessions = async (params: ChatSessionsFilterParams = {}): Pr
   if (params.endDate) queryParams.append('endDate', params.endDate);
   if (params.timeFilter) queryParams.append('timeFilter', params.timeFilter);
   if (params.page !== undefined) queryParams.append('page', params.page.toString());
-  if (params.size !== undefined) queryParams.append('size', params.size.toString());
+  if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
 
   const queryString = queryParams.toString();
   const url = `/session/admin/chat-sessions${queryString ? `?${queryString}` : ''}`;

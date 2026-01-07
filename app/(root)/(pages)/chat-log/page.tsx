@@ -26,7 +26,7 @@ const ChatLogPage = () => {
   const router = useRouter();
   const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -69,8 +69,8 @@ const ChatLogPage = () => {
     endDate: filters.endDate || undefined,
     timeFilter: getTimeFilter(selectedRange),
     page: currentPage - 1,
-    size: itemsPerPage,
-  }), [filters, selectedRange, currentPage]);
+    limit: itemsPerPage,
+  }), [filters, selectedRange, currentPage, itemsPerPage]);
 
   // Fetch chat sessions
   const { data, isLoading, error, refetch } = useChatSessions(apiParams);
@@ -119,12 +119,12 @@ const ChatLogPage = () => {
     },
     {
       key: 'name',
-      label: 'Name',
+      label: "User's Message",
       sortable: true,
     },
     {
       key: 'content',
-      label: 'Content',
+      label: 'Ai Response',
       sortable: false,
       render: (value: string) => {
         const cleanContent = stripMarkdown(value);
@@ -236,6 +236,10 @@ const ChatLogPage = () => {
               totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
+              onItemsPerPageChange={(newItemsPerPage) => {
+                setItemsPerPage(newItemsPerPage);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </div>
