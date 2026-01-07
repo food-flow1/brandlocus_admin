@@ -1,4 +1,4 @@
-import { FileText, BarChart3, Tag, Grid3X3, TrendingUp, ClipboardList, LucideIcon, HelpCircle, Megaphone, Mail } from 'lucide-react'
+import { FileText, BarChart3, Tag, Grid3X3, TrendingUp, ClipboardList, LucideIcon, HelpCircle, Megaphone, Mail, Gamepad2 } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -82,6 +82,13 @@ const getFormStats = (stats?: FormStatistics, totalElements?: number): FormStat[
       iconColor: 'text-purple-600',
     },
     {
+      title: 'Play Test',
+      value: stats?.playTest || 0,
+      icon: Gamepad2,
+      iconBg: 'bg-green-100',
+      iconColor: 'text-green-600',
+    },
+    {
       title: 'Contact',
       value: stats?.contact || 0,
       icon: Mail,
@@ -101,10 +108,10 @@ const getFormStats = (stats?: FormStatistics, totalElements?: number): FormStat[
 const FormCard = ({ statistics, isLoading, totalElements }: FormCardProps) => {
   const formStats = getFormStats(statistics, totalElements);
   
-  // Split stats into 3 rows of 3
+  // Split stats into 3 rows: 3, 3, and 4 cards
   const row1Stats = formStats.slice(0, 3);
   const row2Stats = formStats.slice(3, 6);
-  const row3Stats = formStats.slice(6, 9);
+  const row3Stats = formStats.slice(6, 10);
 
   const StatCard = ({ stat, loading }: { stat?: FormStat; loading?: boolean }) => {
     if (loading) {
@@ -161,10 +168,10 @@ const FormCard = ({ statistics, isLoading, totalElements }: FormCardProps) => {
         }
       </div>
 
-      {/* Row 3: 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Row 3: 4 cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {isLoading
-          ? [...Array(3)].map((_, i) => <StatCard key={`row3-loading-${i}`} loading />)
+          ? [...Array(4)].map((_, i) => <StatCard key={`row3-loading-${i}`} loading />)
           : row3Stats.map((stat) => <StatCard key={stat.title} stat={stat} />)
         }
       </div>

@@ -31,6 +31,11 @@ export interface ChatMessage {
   industryName: string;
   businessName: string;
   createdAt: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  sector?: string | null;
+  keywords?: string | null;
+  topic?: string | null;
 }
 
 // Chat details API response - data is directly an array of messages
