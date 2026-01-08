@@ -29,6 +29,7 @@ export interface ChatMessage {
   content: string;
   name: string;
   industryName: string;
+  industry: string;
   businessName: string;
   createdAt: string;
   firstName?: string | null;
