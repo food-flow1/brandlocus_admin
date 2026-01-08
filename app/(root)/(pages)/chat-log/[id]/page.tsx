@@ -111,7 +111,7 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
       'Chat Type',
       'Content',
       'Name',
-      'Industry Name',
+      'Industry',
       'Business Name',
       'Created At'
     ];
@@ -125,7 +125,7 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
         escapeCSV(msg.chatType),
         escapeCSV(msg.content),
         escapeCSV(msg.name || ''),
-        escapeCSV(msg.industryName || ''),
+        escapeCSV(msg.industry || ''),
         escapeCSV(msg.businessName || ''),
         escapeCSV(msg.createdAt ? new Date(msg.createdAt).toLocaleString() : ''),
       ].join(','))
@@ -280,7 +280,7 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
                     </div>
                     <div className="flex flex-col gap-2">
                       <span className="text-sm font-medium text-gray-600">Industry:</span>
-                      <span className="text-sm font-semibold text-gray-900">{userInfo.industryName}</span>
+                      <span className="text-sm font-semibold text-gray-900">{userInfo.industry}</span>
                     </div>
                   </>
                 )}
@@ -409,7 +409,7 @@ const ChatLogDetailsPage = ({ params }: ChatLogDetailsPageProps) => {
                       </div>
                       <div className='sm:flex sm:items-center sm:gap-2'>
                         <span className="text-xs sm:text-sm font-medium text-gray-600">Industry:</span>
-                        <p className="text-xs sm:text-sm text-gray-900 mt-1">{userInfo.industryName}</p>
+                        <p className="text-xs sm:text-sm text-gray-900 mt-1">{userInfo.industry}</p>
                       </div>
                     </>
                   )}
